@@ -39,7 +39,8 @@ from torch.utils.data import DataLoader, RandomSampler
 from torch.utils.data.distributed import DistributedSampler
 
 from tokenization_unilm import UnilmTokenizer, WhitespaceTokenizer
-from transformers import AdamW, get_linear_schedule_with_warmup
+from transformers import get_linear_schedule_with_warmup
+from torch.optim import AdamW
 from modeling_unilm import UnilmForSeq2SeqDecode, UnilmConfig
 # from transformers import (UnilmTokenizer, WhitespaceTokenizer,
 #                           UnilmForSeq2SeqDecode, AdamW, UnilmConfig)

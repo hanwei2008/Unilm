@@ -281,7 +281,7 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
 
 class Preprocess4Seq2seq(Pipeline):
     """ Pre-processing steps for pretraining transformer """
-    def __init__(self, max_pred, mask_prob, vocab_words, indexer, max_len=512, skipgram_prb=0, skipgram_size=0, mask_whole_word=False, mask_source_words=True, tokenizer=None):
+    def __init__(self, max_pred, mask_prob, vocab_words, indexer, max_len=512, skipgram_prb=0, skipgram_size=0, mask_whole_word=False, mask_source_words=True, tokenizer=None, use_bert=False):
         super().__init__()
         self.max_len = max_len
         self.max_pred = max_pred  # max tokens of prediction
@@ -295,6 +295,7 @@ class Preprocess4Seq2seq(Pipeline):
         self.mask_whole_word = mask_whole_word
         self.mask_source_words = mask_source_words
         self.tokenizer = tokenizer
+        self.use_bert = use_bert
 
     def __call__(self, instance):
         next_sentence_label = None
@@ -305,7 +306,10 @@ class Preprocess4Seq2seq(Pipeline):
         tokens_a, tokens_b = truncate_tokens_pair(tokens_a, tokens_b, self.max_len)
         # Add Special Tokens
         tokens = ['[CLS]'] + tokens_a + ['[SEP]'] + tokens_b + ['[SEP]']
-        segment_ids = [4]*(len(tokens_a)+2) + [5]*(len(tokens_b)+1)
+        if self.use_bert:
+            segment_ids = [0]*(len(tokens_a)+2) + [1]*(len(tokens_b)+1)
+        else:
+            segment_ids = [4]*(len(tokens_a)+2) + [5]*(len(tokens_b)+1)
         # For masked Language Models
         # the number of prediction is sometimes less than max_pred when sequence is short
         effective_length = len(tokens_b)

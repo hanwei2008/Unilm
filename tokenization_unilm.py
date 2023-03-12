@@ -5,7 +5,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import logging
 
-from transformers.tokenization_bert import BertTokenizer, whitespace_tokenize
+from transformers import BertTokenizer
+from transformers.models.bert.tokenization_bert import whitespace_tokenize
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ PRETRAINED_VOCAB_FILES_MAP = {
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    'unilm-large-cased': 512, 
+    'unilm-large-cased': 512,
     'unilm-base-cased': 512
 }
 

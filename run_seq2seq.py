@@ -17,7 +17,8 @@ import torch.distributed as dist
 
 from tokenization_unilm import UnilmTokenizer, WhitespaceTokenizer
 from modeling_unilm import UnilmForSeq2Seq, UnilmConfig
-from transformers import AdamW, get_linear_schedule_with_warmup
+from transformers import get_linear_schedule_with_warmup
+from torch.optim import AdamW
 
 import utils_seq2seq
 
@@ -56,6 +57,8 @@ def main():
                         help="The input data file name.")
     parser.add_argument("--model_type", default=None, type=str, required=True,
                         help="Model type selected in the list: " + ", ".join(MODEL_CLASSES.keys()))
+    parser.add_argument("--use_bert", action='store_true',
+                        help="loading bert pretrain")
     parser.add_argument("--model_name_or_path", default=None, type=str, required=True,
                         help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(ALL_MODELS))
     parser.add_argument("--output_dir", default=None, type=str, required=True,
@@ -167,7 +170,7 @@ def main():
     if args.local_rank == -1 or args.no_cuda:
         device = torch.device(
             "cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
-        n_gpu = torch.cuda.device_count()
+        n_gpu = torch.cuda.device_count() if not args.no_cuda else 0
     else:
         torch.cuda.set_device(args.local_rank)
         device = torch.device("cuda", args.local_rank)
@@ -209,7 +212,7 @@ def main():
 
     if args.do_train:
         print("Loading Train Dataset", args.data_dir)
-        bi_uni_pipeline = [utils_seq2seq.Preprocess4Seq2seq(args.max_pred, args.mask_prob, list(tokenizer.vocab.keys()), tokenizer.convert_tokens_to_ids, args.max_seq_length, mask_source_words=False, skipgram_prb=args.skipgram_prb, skipgram_size=args.skipgram_size, mask_whole_word=args.mask_whole_word, tokenizer=data_tokenizer)]
+        bi_uni_pipeline = [utils_seq2seq.Preprocess4Seq2seq(args.max_pred, args.mask_prob, list(tokenizer.vocab.keys()), tokenizer.convert_tokens_to_ids, args.max_seq_length, mask_source_words=False, skipgram_prb=args.skipgram_prb, skipgram_size=args.skipgram_size, mask_whole_word=args.mask_whole_word, tokenizer=data_tokenizer, use_bert=args.use_bert)]
 
         file = os.path.join(
             args.data_dir, args.src_file if args.src_file else 'train.tgt')

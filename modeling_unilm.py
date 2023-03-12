@@ -15,7 +15,7 @@ import torch.nn.functional as F
 from torch.nn.modules.loss import _Loss
 from transformers.modeling_utils import PreTrainedModel
 from configuration_unilm import UnilmConfig
-from transformers.modeling_bert import load_tf_weights_in_bert, BertPooler, BertIntermediate, BertOutput, BertPredictionHeadTransform, BertSelfOutput, BertLMPredictionHead, BertOnlyMLMHead, BertOnlyMLMHead, BertEmbeddings, BertOnlyNSPHead
+from transformers.models.bert.modeling_bert import load_tf_weights_in_bert, BertPooler, BertIntermediate, BertOutput, BertPredictionHeadTransform, BertSelfOutput, BertLMPredictionHead, BertOnlyMLMHead, BertOnlyMLMHead, BertEmbeddings, BertOnlyNSPHead
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +179,8 @@ class UnilmModel(UnilmPreTrainedModel):
         else:
             raise NotImplementedError
         extended_attention_mask = extended_attention_mask.to(
-            dtype=next(self.parameters()).dtype)  # fp16 compatibility
+            dtype=torch.float32 #dtype=next(self.parameters()).dtype)  # fp16 compatibility
+        )
         extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
         return extended_attention_mask
 
@@ -545,6 +546,7 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
                 return x
 
             def select_beam_items(x, ids):
+                ids = ids.long()
                 id_shape = list(ids.size())
                 id_rank = len(id_shape)
                 assert len(id_shape) == 2
@@ -676,8 +678,8 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
             else:
                 seq = [wids_list[frame_id][pos_in_frame]]
                 for fid in range(frame_id, 0, -1):
-                    pos_in_frame = ptrs[fid][pos_in_frame]
-                    seq.append(wids_list[fid - 1][pos_in_frame])
+                    pos_in_frame = ptrs[fid][int(pos_in_frame)]
+                    seq.append(wids_list[fid - 1][int(pos_in_frame)])
                 seq.reverse()
                 traces['pred_seq'].append(seq)
 
