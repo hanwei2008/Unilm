@@ -167,18 +167,26 @@ def main():
     json.dump(args.__dict__, open(os.path.join(
         args.output_dir, 'opt.json'), 'w'), sort_keys=True, indent=2)
 
-    if args.local_rank == -1 or args.no_cuda:
-        device = torch.device(
-            "cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
-        n_gpu = torch.cuda.device_count() if not args.no_cuda else 0
+    print('local_rank: ', args.local_rank)
+    print('no_cuda: ', args.no_cuda)
+    #if args.local_rank == -1 or args.no_cuda:
+    if args.no_cuda:
+        #device = torch.device(
+        #    "cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+        device = torch.device("cpu")
+        #n_gpu = torch.cuda.device_count() if not args.no_cuda else 0
+        n_gpu = 0
     else:
-        torch.cuda.set_device(args.local_rank)
-        device = torch.device("cuda", args.local_rank)
+        #torch.cuda.set_device(args.local_rank)
+        torch.cuda.set_device(0)
+        #device = torch.device("cuda", args.local_rank)
+        device = torch.device("cuda", 0)
         n_gpu = 1
         # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
-        dist.init_process_group(backend='nccl')
+        #dist.init_process_group(backend='nccl')
     logger.info("device: {} n_gpu: {}, distributed training: {}, 16-bits training: {}".format(
         device, n_gpu, bool(args.local_rank != -1), args.fp16))
+    print(device, n_gpu)
 
     if args.gradient_accumulation_steps < 1:
         raise ValueError("Invalid gradient_accumulation_steps parameter: {}, should be >= 1".format(
@@ -253,6 +261,7 @@ def main():
                         args.model_recover_path)
             model_recover = torch.load(
                 args.model_recover_path, map_location='cpu')
+
     model = model_class.from_pretrained(
         args.model_name_or_path, state_dict=model_recover, config=config)
     if args.local_rank == 0:
@@ -325,7 +334,7 @@ def main():
         for i_epoch in trange(start_epoch, int(args.num_train_epochs)+1, desc="Epoch", disable=args.local_rank not in (-1, 0)):
             if args.local_rank != -1:
                 train_sampler.set_epoch(i_epoch)
-            iter_bar = tqdm(train_dataloader, desc='Iter (loss=X.XXX)',
+            iter_bar = tqdm(train_dataloader, desc='Iter %d(loss=X.XXX)'%i_epoch,
                             disable=args.local_rank not in (-1, 0))
             for step, batch in enumerate(iter_bar):
                 batch = [
@@ -339,7 +348,7 @@ def main():
                 loss = masked_lm_loss
 
                 # logging for each step (i.e., before normalization by args.gradient_accumulation_steps)
-                iter_bar.set_description('Iter (loss=%5.3f)' % loss.item())
+                iter_bar.set_description('Iter %d(loss=%5.3f)' % (i_epoch,loss.item()))
 
                 # ensure that accumlated gradients are normalized
                 if args.gradient_accumulation_steps > 1:

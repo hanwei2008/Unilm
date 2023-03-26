@@ -45,6 +45,7 @@ from modeling_unilm import UnilmForSeq2SeqDecode, UnilmConfig
 # from transformers import (UnilmTokenizer, WhitespaceTokenizer,
 #                           UnilmForSeq2SeqDecode, AdamW, UnilmConfig)
 
+import json
 
 import utils_seq2seq
 
@@ -80,6 +81,8 @@ def main():
                         help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(ALL_MODELS))
     parser.add_argument("--model_recover_path", default=None, type=str,
                         help="The file of fine-tuned pretraining model.")
+    parser.add_argument("--use_bert", action='store_true',
+                        help="loading bert pretrain")
     parser.add_argument("--config_name", default="", type=str,
                         help="Pretrained config name or path if not the same as model_name")
     parser.add_argument("--tokenizer_name", default="", type=str,
@@ -148,8 +151,7 @@ def main():
         args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, do_lower_case=args.do_lower_case)
 
     bi_uni_pipeline = []
-    bi_uni_pipeline.append(utils_seq2seq.Preprocess4Seq2seqDecode(list(tokenizer.vocab.keys()), tokenizer.convert_tokens_to_ids,
-                                                                  args.max_seq_length, max_tgt_length=args.max_tgt_length))
+    bi_uni_pipeline.append(utils_seq2seq.Preprocess4Seq2seqDecode(list(tokenizer.vocab.keys()), tokenizer.convert_tokens_to_ids, args.max_seq_length, max_tgt_length=args.max_tgt_length, use_bert=args.use_bert))
 
     # Prepare model
     mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(
@@ -190,10 +192,17 @@ def main():
         max_src_length = args.max_seq_length - 2 - args.max_tgt_length
 
         with open(args.input_file, encoding="utf-8") as fin:
-            input_lines = [x.strip() for x in fin.readlines()]
-            if args.subset > 0:
-                logger.info("Decoding subset: %d", args.subset)
-                input_lines = input_lines[:args.subset]
+            data_infos = []
+            input_lines = []
+            for line in fin:
+                data_info = json.loads(line)
+                data_infos.append(data_info)
+                input_lines.append(data_info['src_text'])
+
+                if args.subset > 0 and len(data_infos)>=args.subset:
+                    logger.info("Decoding subset: %d", args.subset)
+                    break
+
         data_tokenizer = WhitespaceTokenizer() if args.tokenized_input else tokenizer
         input_lines = [data_tokenizer.tokenize(
             x)[:max_src_length] for x in input_lines]
@@ -235,7 +244,7 @@ def main():
                             if t in ("[SEP]", "[PAD]"):
                                 break
                             output_tokens.append(t)
-                        output_sequence = ' '.join(detokenize(output_tokens))
+                        output_sequence = ''.join(detokenize(output_tokens))
                         output_lines[buf_id[i]] = output_sequence
                         if args.need_score_traces:
                             score_trace_list[buf_id[i]] = {
@@ -245,9 +254,15 @@ def main():
             fn_out = args.output_file
         else:
             fn_out = model_recover_path+'.'+args.split
+        #with open(fn_out, "w", encoding="utf-8") as fout:
+        #    for l in output_lines:
+        #        fout.write(l)
+        #        fout.write("\n")
+
         with open(fn_out, "w", encoding="utf-8") as fout:
-            for l in output_lines:
-                fout.write(l)
+            for data_info, l_out in zip(data_infos, output_lines):
+                data_info['pred_text'] = l_out
+                fout.write(json.dumps(data_info, ensure_ascii=False))
                 fout.write("\n")
 
         if args.need_score_traces:

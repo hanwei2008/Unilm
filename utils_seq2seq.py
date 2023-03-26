@@ -818,7 +818,7 @@ class Preprocess4LeftLM(Pipeline):
 class Preprocess4Seq2seqDecode(Pipeline):
     """ Pre-processing steps for pretraining transformer """
 
-    def __init__(self, vocab_words, indexer, max_len=512, max_tgt_length=128):
+    def __init__(self, vocab_words, indexer, max_len=512, max_tgt_length=128, use_bert=False):
         super().__init__()
         self.max_len = max_len
         self.vocab_words = vocab_words  # vocabulary (sub)words
@@ -827,6 +827,7 @@ class Preprocess4Seq2seqDecode(Pipeline):
         self._tril_matrix = torch.tril(torch.ones(
             (max_len, max_len), dtype=torch.long))
         self.max_tgt_length = max_tgt_length
+        self.use_bert = use_bert
 
     def __call__(self, instance):
         tokens_a, max_a_len = instance
@@ -841,7 +842,10 @@ class Preprocess4Seq2seqDecode(Pipeline):
         max_len_in_batch = min(self.max_tgt_length +
                                max_a_len + 2, self.max_len)
         tokens = padded_tokens_a
-        segment_ids = [4]*(len(padded_tokens_a)) + [5]*(max_len_in_batch - len(padded_tokens_a))
+        if self.use_bert:
+            segment_ids = [0]*(len(padded_tokens_a)) + [1]*(max_len_in_batch - len(padded_tokens_a))
+        else:
+            segment_ids = [4]*(len(padded_tokens_a)) + [5]*(max_len_in_batch - len(padded_tokens_a))
 
         position_ids = []
         for i in range(len(tokens_a) + 2):
