@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 from streamlit_chat import message
 from predict import UnilmPredictor
@@ -21,7 +22,7 @@ up=gen_model()
 
 @st.cache_data
 def gen_text(input_text, up=up, beam_size=1):
-    output_text = up.predict([{'src_text': input_text}], beam_size)[0]
+    output_text = up.predict([{'src_text': input_text}], beam_size, need_score_traces=True)[0]
 
     return output_text
 
@@ -33,4 +34,8 @@ if st.button("生成", key="predict"):
     data_info = gen_text(input_query, beam_size=beam_size)
     end=time.time()
     st.markdown('_time consumption %.3f second_'%(end-start))
-    st.write('<p style="font-size:20px;">'+data_info['pred_text']+'</p>', unsafe_allow_html=True)
+    if beam_size>1:
+        df_beam = pd.DataFrame(data_info['beam_seq_scores'], columns=['结果', '分数'])
+        st.dataframe(df_beam)
+    else:
+        st.write('<p style="font-size:20px;">'+data_info['pred_text']+'</p>', unsafe_allow_html=True)

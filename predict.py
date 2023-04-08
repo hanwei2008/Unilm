@@ -276,7 +276,7 @@ class UnilmPredictor:
 
 def main():
     up = UnilmPredictor()
-    data_infos = up.predict([{'src_text': '泥瓦匠'}], beam_size=4, need_score_traces=True)
+    data_infos = up.predict([{'src_text': '大白'}], beam_size=4, need_score_traces=True)
     for data_info in data_infos:
         print(json.dumps(data_info, ensure_ascii=False, indent=2))
 

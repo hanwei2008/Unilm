@@ -493,6 +493,7 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
         K = search_beam_size
         total_scores = []
         beam_masks = []
+        early_stop = None
         step_ids = []
         step_back_ptrs = []
         partial_seqs = []
@@ -534,26 +535,25 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
                     beam_masks[-1], [batch_size * K, 1, 1])
                 last_seq_scores = torch.reshape(
                     total_scores[-1], [batch_size * K, 1, 1])
-                kk_scores = kk_scores * (1-last_eos) + last_seq_scores * last_eos # 上一步是eos的b则保持上一步的分数
+                kk_scores += last_eos * (-10000.0) + last_seq_scores
                 kk_scores = torch.reshape(kk_scores, [batch_size, K * K])
                 k_scores, k_ids = torch.topk(kk_scores, k=K)  # B * K, B * K
                 back_ptrs = torch.div(k_ids, K)
                 kk_ids = torch.reshape(kk_ids, [batch_size, K * K])
                 k_ids = torch.gather(kk_ids, 1, k_ids)
 
-                # 上一步是eos的继续保持为eos
-                last_eos = torch.reshape(
-                    beam_masks[-1], [batch_size, K])
-                k_ids = torch.where(torch.eq(last_eos, self.eos_id), self.eos_id, k_ids)
             step_back_ptrs.append(back_ptrs)
             step_ids.append(k_ids)
             beam_masks.append(torch.eq(k_ids, self.eos_id).float())
+            if early_stop is None:
+                early_stop = torch.sum(beam_masks[-1], dim=1)
+            else:
+                early_stop = early_stop + torch.sum(beam_masks[-1], dim=1)
 
             total_scores.append(k_scores)
 
-            # 查看eos情况，看是否可以提前结束
-            last_beam_mask = beam_masks[-1]
-            if torch.all(last_beam_mask).data:
+            ## 查看early_stop情况，看是否可以提前结束
+            if torch.all(torch.greater_equal(early_stop, search_beam_size)).data:
                 break
 
             def first_expand(x):
@@ -684,7 +684,6 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
             pos_in_frame = -1
 
             fid_pif_fs_list = []
-            print(last_frame_id, wids_list)
             for fid in range(last_frame_id + 1):
                 for i, wid in enumerate(wids_list[fid]):
                     if wid == self.eos_id or fid == last_frame_id:
