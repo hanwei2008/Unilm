@@ -184,6 +184,7 @@ class UnilmPredictor:
             need_score_traces: 是否返回详细的解码过程
         '''
 
+        need_score_traces = need_score_traces and beam_size>1
         input_lines = []
         for data_info in data_infos:
             input_lines.append(data_info['src_text'])
@@ -199,6 +200,7 @@ class UnilmPredictor:
                              key=lambda x: -len(x[1]))
         output_lines = [""] * len(input_lines)
         score_trace_list = [None] * len(input_lines)
+        output_beams = [[]] * len(input_lines)
         total_batch = math.ceil(len(input_lines) / self.args.batch_size)
 
         next_i = 0
@@ -221,7 +223,7 @@ class UnilmPredictor:
                 traces = self.model(input_ids, token_type_ids,
                                position_ids, input_mask, beam_size)
                 if beam_size > 1:
-                    traces = {k: v.tolist() for k, v in traces.items()}
+                    traces = {k: v  if isinstance(v, list) else v.tolist() for k, v in traces.items()}
                     output_ids = traces['pred_seq']
                 else:
                     output_ids = traces.tolist()
@@ -235,14 +237,29 @@ class UnilmPredictor:
                         output_tokens.append(t)
                     output_sequence = ''.join(self.detokenize(output_tokens))
                     output_lines[buf_id[i]] = output_sequence
+
                     if need_score_traces:
                         score_trace_list[buf_id[i]] = {
                             'scores': traces['scores'][i], 'wids': traces['wids'][i], 'ptrs': traces['ptrs'][i]}
+                        beam_seqs = traces['beam_seqs'][i]
+                        beam_scores = traces['beam_scores'][i]
+                        beam_seqws = []
+                        for w_ids in beam_seqs:
+                            output_buf = self.tokenizer.convert_ids_to_tokens(w_ids)
+                            output_tokens = []
+                            for t in output_buf:
+                                if t in ("[SEP]", "[PAD]"):
+                                    break
+                                output_tokens.append(t)
+                            output_sequence = ''.join(self.detokenize(output_tokens))
+                            beam_seqws.append(output_sequence)
+                        output_beams[buf_id[i]] = [(beam_seqw, beam_score) for beam_seqw, beam_score in zip(beam_seqws, beam_scores)]
 
-        for data_info, l_out, score_trace in zip(data_infos, output_lines, score_trace_list):
+        for data_info, l_out, out_beam, score_trace in zip(data_infos, output_lines, output_beams, score_trace_list):
            data_info['pred_text'] = l_out
            if need_score_traces:
-               data_info['score_trace']=score_trace
+               #data_info['score_trace']=score_trace
+               data_info['beam_seq_scores']=out_beam
 
         return data_infos
 
@@ -259,7 +276,7 @@ class UnilmPredictor:
 
 def main():
     up = UnilmPredictor()
-    data_infos = up.predict([{'src_text': '泥瓦匠'}], beam_size=4)
+    data_infos = up.predict([{'src_text': '泥瓦匠'}], beam_size=4, need_score_traces=True)
     for data_info in data_infos:
         print(json.dumps(data_info, ensure_ascii=False, indent=2))
 

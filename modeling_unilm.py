@@ -475,7 +475,8 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
 
     def beam_search(self, input_ids, token_type_ids, position_ids, attention_mask, search_beam_size):
         '''
-        todo： 算分错误， 长度惩罚应在解码过程中进行
+        * 修复长度奖励
+        * early stop，即eos达到beam数量则结束，因为新添加的token的logit都是负值，累加后不可能更大
         '''
         input_shape = list(input_ids.size())
         batch_size = input_shape[0]
@@ -533,16 +534,28 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
                     beam_masks[-1], [batch_size * K, 1, 1])
                 last_seq_scores = torch.reshape(
                     total_scores[-1], [batch_size * K, 1, 1])
-                kk_scores += last_eos * (-10000.0) + last_seq_scores
+                #kk_scores += last_eos * (-10000.0) + last_seq_scores
+                kk_scores = kk_scores * (1-last_eos) + last_seq_scores * last_eos # 上一步是eos的b则保持上一步的分数
                 kk_scores = torch.reshape(kk_scores, [batch_size, K * K])
                 k_scores, k_ids = torch.topk(kk_scores, k=K)  # B * K, B * K
                 back_ptrs = torch.div(k_ids, K)
                 kk_ids = torch.reshape(kk_ids, [batch_size, K * K])
                 k_ids = torch.gather(kk_ids, 1, k_ids)
+
+                # 上一步是eos的继续保持为eos
+                last_eos = torch.reshape(
+                    beam_masks[-1], [batch_size, K])
+                k_ids = torch.where(torch.eq(last_eos, self.eos_id), self.eos_id, k_ids)
             step_back_ptrs.append(back_ptrs)
             step_ids.append(k_ids)
             beam_masks.append(torch.eq(k_ids, self.eos_id).float())
+
             total_scores.append(k_scores)
+
+            # 查看eos情况，看是否可以提前结束
+            last_beam_mask = beam_masks[-1]
+            if torch.all(last_beam_mask).data:
+                break
 
             def first_expand(x):
                 input_shape = list(x.size())
@@ -670,6 +683,9 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
             max_score = -math.inf
             frame_id = -1
             pos_in_frame = -1
+
+            fid_pif_fs_list = []
+            print(last_frame_id, wids_list)
             for fid in range(last_frame_id + 1):
                 for i, wid in enumerate(wids_list[fid]):
                     if wid == self.eos_id or fid == last_frame_id:
@@ -678,6 +694,10 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
                             max_score = s
                             frame_id = fid
                             pos_in_frame = i
+
+                        fid_pif_fs_list.append((fid, i, s))
+            fid_pif_fs_list = sorted(fid_pif_fs_list, key=lambda x:x[-1], reverse=True)[:search_beam_size]
+
             if frame_id == -1:
                 traces['pred_seq'].append([0])
             else:
@@ -687,6 +707,22 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
                     seq.append(wids_list[fid - 1][int(pos_in_frame)])
                 seq.reverse()
                 traces['pred_seq'].append(seq)
+
+            traces['beam_seqs'] = [[]]
+            traces['beam_scores'] = [[]]
+            for frame_id, pos_in_frame, score in fid_pif_fs_list:
+                if frame_id == -1:
+                    traces['beam_seqs'][-1].append([0])
+                    traces['beam_scores'][-1].append(score)
+                else:
+                    seq = [wids_list[frame_id][pos_in_frame]]
+                    for fid in range(frame_id, 0, -1):
+                        pos_in_frame = ptrs[fid][int(pos_in_frame)]
+                        seq.append(wids_list[fid - 1][int(pos_in_frame)])
+                    seq.reverse()
+                    traces['beam_seqs'][-1].append(seq)
+                    traces['beam_scores'][-1].append(score)
+
 
         def _pad_sequence(sequences, max_len, padding_value=0):
             trailing_dims = sequences[0].size()[1:]
