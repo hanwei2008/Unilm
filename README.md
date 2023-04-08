@@ -72,3 +72,7 @@ cliu@iyunwen.com
 
 # 相关链接
 http://www.iyunwen.com/
+
+# query2query
+## todo
+* 去掉tgt仅仅是src的一部分的情况

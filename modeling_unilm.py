@@ -472,6 +472,9 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
         return torch.cat(output_ids, dim=1)
 
     def beam_search(self, input_ids, token_type_ids, position_ids, attention_mask):
+        '''
+        todo： 算分错误，每次topk都是针对单个token，而不是序列
+        '''
         input_shape = list(input_ids.size())
         batch_size = input_shape[0]
         input_length = input_shape[1]
@@ -510,12 +513,12 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
             last_hidden = new_encoded_layers[-1][:, -1:, :]
             prediction_scores = self.cls(last_hidden)
             log_scores = torch.nn.functional.log_softmax(
-                prediction_scores, dim=-1)
+                prediction_scores, dim=-1)  # Bx1xW
             if forbid_word_mask is not None:
                 log_scores += (forbid_word_mask * -10000.0)
             if self.min_len and (next_pos-input_length+1 <= self.min_len):
                 log_scores[:, :, self.eos_id].fill_(-10000.0)
-            kk_scores, kk_ids = torch.topk(log_scores, k=K)
+            kk_scores, kk_ids = torch.topk(log_scores, k=K)  # Bx1xK, Bx1xK 或 BxKxK, BxKxK
             if len(total_scores) == 0:
                 k_ids = torch.reshape(kk_ids, [batch_size, K])
                 back_ptrs = torch.zeros(batch_size, K, dtype=torch.long)
@@ -527,7 +530,7 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
                     total_scores[-1], [batch_size * K, 1, 1])
                 kk_scores += last_eos * (-10000.0) + last_seq_scores
                 kk_scores = torch.reshape(kk_scores, [batch_size, K * K])
-                k_scores, k_ids = torch.topk(kk_scores, k=K)
+                k_scores, k_ids = torch.topk(kk_scores, k=K)  # B * K, B * K
                 back_ptrs = torch.div(k_ids, K)
                 kk_ids = torch.reshape(kk_ids, [batch_size, K * K])
                 k_ids = torch.gather(kk_ids, 1, k_ids)
@@ -643,13 +646,13 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
                     else:
                         forbid_word_mask = None
             next_pos += 1
-        total_scores = [x.tolist() for x in total_scores]
-        step_ids = [x.tolist() for x in step_ids]
+        total_scores = [x.tolist() for x in total_scores]  # LxBxK
+        step_ids = [x.tolist() for x in step_ids]  # LxBxK
         step_back_ptrs = [x.tolist() for x in step_back_ptrs]
         traces = {'pred_seq': [], 'scores': [], 'wids': [], 'ptrs': []}
         for b in range(batch_size):
-            scores = [x[b] for x in total_scores]
-            wids_list = [x[b] for x in step_ids]
+            scores = [x[b] for x in total_scores]  # LxK
+            wids_list = [x[b] for x in step_ids] # LxK
             ptrs = [x[b] for x in step_back_ptrs]
             traces['scores'].append(scores)
             traces['wids'].append(wids_list)

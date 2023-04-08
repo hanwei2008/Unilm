@@ -5,6 +5,7 @@ if __name__ == '__main__':
     import pandas as pd
     import json
     import random
+    import tqdm
 
     SEP = '\u2558'
 
@@ -14,10 +15,12 @@ if __name__ == '__main__':
     df_data = pd.read_csv(p_in, sep=SEP)
 
     with open(p_out, 'w') as fw:
-        for _, row in df_data.iterrows():
+        for _, row in tqdm.tqdm(df_data.iterrows(),desc='进度：', total=df_data.shape[0]):
             if row['label']==1:
                 q1 = row['query1']
                 q2 = row['query2']
+                if q1 in q2 or q2 in q1:
+                    continue
                 n1 = len(q1)
                 n2 = len(q2)
                 if n1 > 20 and n2 < 20:

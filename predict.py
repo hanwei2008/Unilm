@@ -1,0 +1,269 @@
+# coding=utf-8
+# The MIT License (MIT)
+
+# Copyright (c) Microsoft Corporation
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import os
+import logging
+import glob
+import argparse
+import math
+import random
+from tqdm import tqdm, trange
+import pickle
+import numpy as np
+import torch
+from torch.utils.data import DataLoader, RandomSampler
+from torch.utils.data.distributed import DistributedSampler
+
+from tokenization_unilm import UnilmTokenizer, WhitespaceTokenizer
+from transformers import get_linear_schedule_with_warmup
+from torch.optim import AdamW
+from modeling_unilm import UnilmForSeq2SeqDecode, UnilmConfig
+
+import utils_seq2seq
+
+ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys())
+                  for conf in (UnilmConfig,)), ())
+MODEL_CLASSES = {
+    'unilm': (UnilmConfig, UnilmForSeq2SeqDecode, UnilmTokenizer)
+}
+
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
+                    datefmt='%m/%d/%Y %H:%M:%S',
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class UnilmPredictor:
+
+    def __init__(self, model_recover_path='data/unilm_query2query_v3/model.3.bin'):
+        parser = argparse.ArgumentParser()
+
+        # Required parameters
+        parser.add_argument("--model_type", default='unilm', type=str,
+                            help="Model type selected in the list: " + ", ".join(MODEL_CLASSES.keys()))
+        parser.add_argument("--model_name_or_path", default='/data_slow/common/pretrain/torch_unilm_model', type=str,
+                            help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(ALL_MODELS))
+        parser.add_argument("--model_recover_path", default='data/unilm_query2query_v3/model.3.bin', type=str,
+                            help="The file of fine-tuned pretraining model.")
+        parser.add_argument("--use_bert", action='store_true',
+                            help="loading bert pretrain")
+        parser.add_argument("--config_name", default="", type=str,
+                            help="Pretrained config name or path if not the same as model_name")
+        parser.add_argument("--tokenizer_name", default="", type=str,
+                            help="Pretrained tokenizer name or path if not the same as model_name")
+        parser.add_argument("--max_seq_length", default=512, type=int,
+                            help="The maximum total input sequence length after WordPiece tokenization. \n"
+                                 "Sequences longer than this will be truncated, and sequences shorter \n"
+                                 "than this will be padded.")
+
+        # decoding parameters
+        parser.add_argument('--use_gpu', action='store_true',
+                            help="使用gpu")
+        parser.add_argument('--fp16', action='store_true',
+                            help="Whether to use 16-bit float precision instead of 32-bit")
+        parser.add_argument('--fp16_opt_level', type=str, default='O1',
+                            help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
+                            "See details at https://nvidia.github.io/apex/amp.html")
+        parser.add_argument("--input_file", type=str, help="Input file")
+        parser.add_argument('--subset', type=int, default=0,
+                            help="Decode a subset of the input dataset.")
+        parser.add_argument("--output_file", type=str, help="output file")
+        parser.add_argument("--split", type=str, default="",
+                            help="Data split (train/val/test).")
+        parser.add_argument('--tokenized_input', action='store_true',
+                            help="Whether the input is tokenized.")
+        parser.add_argument('--seed', type=int, default=123,
+                            help="random seed for initialization")
+        parser.add_argument("--do_lower_case", type=bool, default=True,
+                            help="Set this flag if you are using an uncased model.")
+        parser.add_argument('--batch_size', type=int, default=16,
+                            help="Batch size for decoding.")
+        parser.add_argument('--beam_size', type=int, default=1,
+                            help="Beam size for searching")
+        parser.add_argument('--length_penalty', type=float, default=0,
+                            help="Length penalty for beam search")
+        parser.add_argument('--forbid_duplicate_ngrams', action='store_true')
+        parser.add_argument('--forbid_ignore_word', type=str, default=None,
+                            help="Forbid the word during forbid_duplicate_ngrams")
+        parser.add_argument("--min_len", default=None, type=int)
+        parser.add_argument('--need_score_traces', action='store_true')
+        parser.add_argument('--ngram_size', type=int, default=3)
+        parser.add_argument('--max_tgt_length', type=int, default=128,
+                            help="maximum length of target sequence")
+
+        args = parser.parse_args()
+
+        self.args = args
+
+        self.args.model_recover_path = model_recover_path
+
+        if args.need_score_traces and args.beam_size <= 1:
+            raise ValueError(
+                "Score trace is only available for beam search with beam size > 1.")
+        if args.max_tgt_length >= args.max_seq_length - 2:
+            raise ValueError("Maximum tgt length exceeds max seq length - 2.")
+
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() and args.use_gpu else "cpu")
+        n_gpu = torch.cuda.device_count() if self.device.type=='cuda' else 0
+
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        if n_gpu > 0:
+            torch.cuda.manual_seed_all(args.seed)
+
+        args.model_type = args.model_type.lower()
+        config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
+        config = config_class.from_pretrained(
+            args.config_name if args.config_name else args.model_name_or_path, max_position_embeddings=args.max_seq_length)
+        self.tokenizer = tokenizer_class.from_pretrained(
+            args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, do_lower_case=args.do_lower_case)
+
+        self.bi_uni_pipeline = []
+        self.bi_uni_pipeline.append(utils_seq2seq.Preprocess4Seq2seqDecode(list(self.tokenizer.vocab.keys()), self.tokenizer.convert_tokens_to_ids, args.max_seq_length, max_tgt_length=args.max_tgt_length, use_bert=args.use_bert))
+
+        # Prepare model
+        mask_word_id, eos_word_ids, sos_word_id = self.tokenizer.convert_tokens_to_ids(
+            ["[MASK]", "[SEP]", "[S2S_SOS]"])
+        forbid_ignore_set = None
+        if args.forbid_ignore_word:
+            w_list = []
+            for w in args.forbid_ignore_word.split('|'):
+                if w.startswith('[') and w.endswith(']'):
+                    w_list.append(w.upper())
+                else:
+                    w_list.append(w)
+            forbid_ignore_set = set(self.tokenizer.convert_tokens_to_ids(w_list))
+        logger.info("***** Recover model: %s *****", args.model_recover_path)
+        model_recover = torch.load(args.model_recover_path)
+        self.model = model_class.from_pretrained(args.model_name_or_path, state_dict=model_recover, config=config, mask_word_id=mask_word_id, search_beam_size=args.beam_size, length_penalty=args.length_penalty, eos_id=eos_word_ids, sos_id=sos_word_id, forbid_duplicate_ngrams=args.forbid_duplicate_ngrams, forbid_ignore_set=forbid_ignore_set, ngram_size=args.ngram_size, min_len=args.min_len)
+        del model_recover
+
+        self.model.to(self.device)
+
+        if args.fp16:
+            try:
+                from apex import amp
+            except ImportError:
+                raise ImportError(
+                    "Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
+            self.model = amp.initialize(self.model, opt_level=args.fp16_opt_level)
+
+        torch.cuda.empty_cache()
+        self.model.eval()
+        self.max_src_length = args.max_seq_length - 2 - args.max_tgt_length
+
+    def predict(self, data_infos, need_score_traces=False):
+        '''
+        Args:
+            data_infos: [{'src_text':xxx}]
+            need_score_traces: 是否返回详细的解码过程
+        '''
+
+        input_lines = []
+        for data_info in data_infos:
+            input_lines.append(data_info['src_text'])
+
+            if self.args.subset > 0 and len(data_infos)>=self.args.subset:
+                logger.info("Decoding subset: %d", self.args.subset)
+                break
+
+        data_tokenizer = WhitespaceTokenizer() if self.args.tokenized_input else self.tokenizer
+        input_lines = [data_tokenizer.tokenize(
+            x)[:self.max_src_length] for x in input_lines]
+        input_lines = sorted(list(enumerate(input_lines)),
+                             key=lambda x: -len(x[1]))
+        output_lines = [""] * len(input_lines)
+        score_trace_list = [None] * len(input_lines)
+        total_batch = math.ceil(len(input_lines) / self.args.batch_size)
+
+        next_i = 0
+        while next_i < len(input_lines):
+            _chunk = input_lines[next_i:next_i + self.args.batch_size]
+            buf_id = [x[0] for x in _chunk]
+            buf = [x[1] for x in _chunk]
+            next_i += self.args.batch_size
+            max_a_len = max([len(x) for x in buf])
+            instances = []
+            for instance in [(x, max_a_len) for x in buf]:
+                for proc in self.bi_uni_pipeline:
+                    instances.append(proc(instance))
+            with torch.no_grad():
+                batch = utils_seq2seq.batch_list_to_batch_tensors(
+                    instances)
+                batch = [
+                    t.to(self.device) if t is not None else None for t in batch]
+                input_ids, token_type_ids, position_ids, input_mask = batch
+                traces = self.model(input_ids, token_type_ids,
+                               position_ids, input_mask)
+                if self.args.beam_size > 1:
+                    traces = {k: v.tolist() for k, v in traces.items()}
+                    output_ids = traces['pred_seq']
+                else:
+                    output_ids = traces.tolist()
+                for i in range(len(buf)):
+                    w_ids = output_ids[i]
+                    output_buf = self.tokenizer.convert_ids_to_tokens(w_ids)
+                    output_tokens = []
+                    for t in output_buf:
+                        if t in ("[SEP]", "[PAD]"):
+                            break
+                        output_tokens.append(t)
+                    output_sequence = ''.join(self.detokenize(output_tokens))
+                    output_lines[buf_id[i]] = output_sequence
+                    if need_score_traces:
+                        score_trace_list[buf_id[i]] = {
+                            'scores': traces['scores'][i], 'wids': traces['wids'][i], 'ptrs': traces['ptrs'][i]}
+
+        for data_info, l_out, score_trace in zip(data_infos, output_lines, score_trace_list):
+           data_info['pred_text'] = l_out
+           if need_score_traces:
+               data_info['score_trace']=score_trace
+
+        return data_infos
+
+
+    def detokenize(self, tk_list):
+        r_list = []
+        for tk in tk_list:
+            if tk.startswith('##') and len(r_list) > 0:
+                r_list[-1] = r_list[-1] + tk[2:]
+            else:
+                r_list.append(tk)
+        return r_list
+
+
+def main():
+    up = UnilmPredictor()
+    data_infos = up.predict([{'src_text': '泥瓦匠'}])
+    for data_info in data_infos:
+        print(json.dumps(data_info, ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    import json
+    main()
