@@ -20,16 +20,17 @@ def gen_model():
 up=gen_model()
 
 @st.cache_data
-def gen_text(input_text, up=up):
-    output_text = up.predict([{'src_text': input_text}])[0]
+def gen_text(input_text, up=up, beam_size=1):
+    output_text = up.predict([{'src_text': input_text}], beam_size)[0]
 
     return output_text
 
 input_query = st.text_area(label="输入query", value="大白", height = 100, placeholder="在这里输入query")
+beam_size = st.slider('Beam Size', 1, 8, 1)
 
 if st.button("生成", key="predict"):
     start=time.time()
-    data_info = gen_text(input_query)
+    data_info = gen_text(input_query, beam_size=beam_size)
     end=time.time()
     st.markdown('_time consumption %.3f second_'%(end-start))
     st.write('<p style="font-size:20px;">'+data_info['pred_text']+'</p>', unsafe_allow_html=True)

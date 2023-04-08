@@ -419,9 +419,11 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
         self._tie_or_clone_weights(self.cls.predictions.decoder,
                                    self.bert.embeddings.word_embeddings)
 
-    def forward(self, input_ids, token_type_ids, position_ids, attention_mask):
-        if self.search_beam_size > 1:
-            return self.beam_search(input_ids, token_type_ids, position_ids, attention_mask)
+    def forward(self, input_ids, token_type_ids, position_ids, attention_mask, search_beam_size=None):
+        if search_beam_size is None:
+            search_beam_size = self.search_beam_size
+        if search_beam_size > 1:
+            return self.beam_search(input_ids, token_type_ids, position_ids, attention_mask, search_beam_size)
 
         input_shape = list(input_ids.size())
         batch_size = input_shape[0]
@@ -471,9 +473,9 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
 
         return torch.cat(output_ids, dim=1)
 
-    def beam_search(self, input_ids, token_type_ids, position_ids, attention_mask):
+    def beam_search(self, input_ids, token_type_ids, position_ids, attention_mask, search_beam_size):
         '''
-        todo： 算分错误，每次topk都是针对单个token，而不是序列
+        todo： 算分错误， 长度惩罚应在解码过程中进行
         '''
         input_shape = list(input_ids.size())
         batch_size = input_shape[0]
@@ -487,7 +489,7 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
         curr_ids = input_ids
         mask_ids = input_ids.new(batch_size, 1).fill_(self.mask_word_id)
         next_pos = input_length
-        K = self.search_beam_size
+        K = search_beam_size
         total_scores = []
         beam_masks = []
         step_ids = []
@@ -497,6 +499,7 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
         buf_matrix = None
 
         while next_pos < output_length:
+            fid = next_pos - input_length
             curr_length = list(curr_ids.size())[1]
 
             start_pos = next_pos - curr_length
@@ -524,6 +527,8 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
                 back_ptrs = torch.zeros(batch_size, K, dtype=torch.long)
                 k_scores = torch.reshape(kk_scores, [batch_size, K])
             else:
+                if self.length_penalty > 0:
+                    kk_scores /= math.pow((6 + fid) / 6.0, self.length_penalty)
                 last_eos = torch.reshape(
                     beam_masks[-1], [batch_size * K, 1, 1])
                 last_seq_scores = torch.reshape(
@@ -669,9 +674,6 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
                 for i, wid in enumerate(wids_list[fid]):
                     if wid == self.eos_id or fid == last_frame_id:
                         s = scores[fid][i]
-                        if self.length_penalty > 0:
-                            s /= math.pow((5 + fid + 1) / 6.0,
-                                          self.length_penalty)
                         if s > max_score:
                             max_score = s
                             frame_id = fid

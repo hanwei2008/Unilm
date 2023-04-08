@@ -177,7 +177,7 @@ class UnilmPredictor:
         self.model.eval()
         self.max_src_length = args.max_seq_length - 2 - args.max_tgt_length
 
-    def predict(self, data_infos, need_score_traces=False):
+    def predict(self, data_infos, beam_size=1, need_score_traces=False):
         '''
         Args:
             data_infos: [{'src_text':xxx}]
@@ -219,8 +219,8 @@ class UnilmPredictor:
                     t.to(self.device) if t is not None else None for t in batch]
                 input_ids, token_type_ids, position_ids, input_mask = batch
                 traces = self.model(input_ids, token_type_ids,
-                               position_ids, input_mask)
-                if self.args.beam_size > 1:
+                               position_ids, input_mask, beam_size)
+                if beam_size > 1:
                     traces = {k: v.tolist() for k, v in traces.items()}
                     output_ids = traces['pred_seq']
                 else:
@@ -259,7 +259,7 @@ class UnilmPredictor:
 
 def main():
     up = UnilmPredictor()
-    data_infos = up.predict([{'src_text': '泥瓦匠'}])
+    data_infos = up.predict([{'src_text': '泥瓦匠'}], beam_size=4)
     for data_info in data_infos:
         print(json.dumps(data_info, ensure_ascii=False, indent=2))
 
