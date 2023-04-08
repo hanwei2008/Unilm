@@ -6,22 +6,22 @@ import json
 import time
 
 st.set_page_config(
-    page_title="job2queries",
+    page_title="job2title",
     page_icon=":robot:"
 )
 
-st.title('根据招工详情生成query')
+st.title('根据招工详情生成标题')
 
 @st.cache_resource
 def gen_model():
-    up = UnilmPredictor(model_recover_path='data/unilm_job2queries/model.1.bin')
+    up = UnilmPredictor(model_recover_path='data/unilm_job2title_tmp/model.3.bin')
 
     return up
 
-job2queries_up=gen_model()
+job2title_up=gen_model()
 
 @st.cache_data
-def gen_text(input_text, up=job2queries_up, beam_size=1):
+def gen_text(input_text, up=job2title_up, beam_size=1):
     output_text = up.predict([{'src_text': input_text}], beam_size, need_score_traces=True)[0]
 
     return output_text

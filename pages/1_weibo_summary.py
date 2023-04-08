@@ -18,10 +18,10 @@ def gen_model():
 
     return up
 
-up=gen_model()
+weibo_summary_up=gen_model()
 
 @st.cache_data
-def gen_text(input_text, up=up, beam_size=1):
+def gen_text(input_text, up=weibo_summary_up, beam_size=1):
     output_text = up.predict([{'src_text': input_text}], beam_size, need_score_traces=True)[0]
 
     return output_text

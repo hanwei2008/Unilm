@@ -211,7 +211,7 @@ from tqdm import tqdm
 
 class Seq2SeqDataset(torch.utils.data.Dataset):
     """ Load sentence pair (sequential or random order) from corpus """
-    def __init__(self, file, batch_size, tokenizer, max_len, short_sampling_prob=0.1, sent_reverse_order=False, bi_uni_pipeline=[]):
+    def __init__(self, file, batch_size, tokenizer, max_len, short_sampling_prob=0.1, sent_reverse_order=False, bi_uni_pipeline=[], src_desc='src_text', tgt_desc='tgt_text'):
         super().__init__()
         self.tokenizer = tokenizer  # tokenize function
         self.max_len = max_len  # maximum length of tokens
@@ -219,6 +219,8 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
         self.bi_uni_pipeline = bi_uni_pipeline
         self.batch_size = batch_size
         self.sent_reverse_order = sent_reverse_order
+        self.src_desc = src_desc
+        self.tgt_desc = tgt_desc
 
         # read the file into memory
         self.ex_list = []
@@ -254,8 +256,8 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
         sample = eval(line.strip())
         # src_tk = tokenizer.tokenize(sample["src_text"])
         # tgt_tk = tokenizer.tokenize(sample["tgt_text"])
-        src_tk = sample["src_text"]
-        tgt_tk = sample["tgt_text"]
+        src_tk = sample[self.src_desc]
+        tgt_tk = sample[self.tgt_desc]
         return (src_tk, tgt_tk)
 
     def __len__(self):

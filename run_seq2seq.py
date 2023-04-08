@@ -83,6 +83,8 @@ def main():
                         help="max position embeddings")
     parser.add_argument("--do_train", action='store_true',
                         help="Whether to run training.")
+    parser.add_argument("--parallel", action='store_true',
+                        help="Whether to parallel training.")
     parser.add_argument("--do_eval", action='store_true',
                         help="Whether to run eval on the dev set.")
     parser.add_argument("--do_lower_case", action='store_true',
@@ -151,6 +153,11 @@ def main():
     parser.add_argument('--mask_whole_word', action='store_true',
                         help="Whether masking a whole word.")
 
+    parser.add_argument('--src_desc', type=str, default='src_text',
+                        help="输入字段名称")
+    parser.add_argument('--tgt_desc', type=str, default='tgt_text',
+                        help="输出字段名称")
+
     args = parser.parse_args()
 
     if not(args.model_recover_path and Path(args.model_recover_path).exists()):
@@ -178,15 +185,18 @@ def main():
         n_gpu = 0
     else:
         #torch.cuda.set_device(args.local_rank)
-        torch.cuda.set_device(0)
+        if not args.parallel:
+            torch.cuda.set_device(0)
+            device = torch.device("cuda", 0)
+            n_gpu = 1
+        else:
+            device = torch.device("cuda")
+            n_gpu = torch.cuda.device_count()
         #device = torch.device("cuda", args.local_rank)
-        device = torch.device("cuda", 0)
-        n_gpu = 1
         # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
         #dist.init_process_group(backend='nccl')
     logger.info("device: {} n_gpu: {}, distributed training: {}, 16-bits training: {}".format(
         device, n_gpu, bool(args.local_rank != -1), args.fp16))
-    print(device, n_gpu)
 
     if args.gradient_accumulation_steps < 1:
         raise ValueError("Invalid gradient_accumulation_steps parameter: {}, should be >= 1".format(
@@ -225,7 +235,7 @@ def main():
         file = os.path.join(
             args.data_dir, args.src_file if args.src_file else 'train.tgt')
         train_dataset = utils_seq2seq.Seq2SeqDataset(
-            file, args.train_batch_size, data_tokenizer, args.max_seq_length, bi_uni_pipeline=bi_uni_pipeline)
+            file, args.train_batch_size, data_tokenizer, args.max_seq_length, bi_uni_pipeline=bi_uni_pipeline, src_desc=args.src_desc, tgt_desc=args.tgt_desc)
         if args.local_rank == -1:
             train_sampler = RandomSampler(train_dataset, replacement=False)
             _batch_size = args.train_batch_size
@@ -336,6 +346,7 @@ def main():
                 train_sampler.set_epoch(i_epoch)
             iter_bar = tqdm(train_dataloader, desc='Iter %d(loss=X.XXX)'%i_epoch,
                             disable=args.local_rank not in (-1, 0))
+            n_batch = len(train_dataloader)
             for step, batch in enumerate(iter_bar):
                 batch = [
                     t.to(device) if t is not None else None for t in batch]
@@ -370,28 +381,29 @@ def main():
                     optimizer.zero_grad()
                     global_step += 1
 
-            # Save a trained model
-            if (args.local_rank == -1 or torch.distributed.get_rank() == 0):
-                logger.info(
-                    "** ** * Saving fine-tuned model and optimizer ** ** * ")
-                model_to_save = model.module if hasattr(
-                    model, 'module') else model  # Only save the model it-self
-                output_model_file = os.path.join(
-                    args.output_dir, "model.{0}.bin".format(i_epoch))
-                torch.save(model_to_save.state_dict(), output_model_file)
-                output_optim_file = os.path.join(
-                    args.output_dir, "optim.{0}.bin".format(i_epoch))
-                torch.save(optimizer.state_dict(), output_optim_file)
-                if args.fp16:
-                    output_amp_file = os.path.join(
-                        args.output_dir, "amp.{0}.bin".format(i_epoch))
-                    torch.save(amp.state_dict(), output_amp_file)
-                output_sched_file = os.path.join(
-                    args.output_dir, "sched.{0}.bin".format(i_epoch))
-                torch.save(scheduler.state_dict(), output_sched_file)
+                if step%(n_batch//5) == 0:
+                    # Save a trained model
+                    if (args.local_rank == -1 or torch.distributed.get_rank() == 0):
+                        logger.info(
+                            "** ** * Saving fine-tuned model and optimizer ** ** * ")
+                        model_to_save = model.module if hasattr(
+                            model, 'module') else model  # Only save the model it-self
+                        output_model_file = os.path.join(
+                            args.output_dir, "model.{0}.bin".format(i_epoch-1+step/n_batch))
+                        torch.save(model_to_save.state_dict(), output_model_file)
+                        output_optim_file = os.path.join(
+                            args.output_dir, "optim.{0}.bin".format(i_epoch-1+step/n_batch))
+                        torch.save(optimizer.state_dict(), output_optim_file)
+                        if args.fp16:
+                            output_amp_file = os.path.join(
+                                args.output_dir, "amp.{0}.bin".format(i_epoch-1+step/n_batch))
+                            torch.save(amp.state_dict(), output_amp_file)
+                        output_sched_file = os.path.join(
+                            args.output_dir, "sched.{0}.bin".format(i_epoch-1+step/n_batch))
+                        torch.save(scheduler.state_dict(), output_sched_file)
 
-                logger.info("***** CUDA.empty_cache() *****")
-                torch.cuda.empty_cache()
+                        logger.info("***** CUDA.empty_cache() *****")
+                        torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
