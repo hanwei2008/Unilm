@@ -534,7 +534,6 @@ class UnilmForSeq2SeqDecode(UnilmPreTrainedModel):
                     beam_masks[-1], [batch_size * K, 1, 1])
                 last_seq_scores = torch.reshape(
                     total_scores[-1], [batch_size * K, 1, 1])
-                #kk_scores += last_eos * (-10000.0) + last_seq_scores
                 kk_scores = kk_scores * (1-last_eos) + last_seq_scores * last_eos # 上一步是eos的b则保持上一步的分数
                 kk_scores = torch.reshape(kk_scores, [batch_size, K * K])
                 k_scores, k_ids = torch.topk(kk_scores, k=K)  # B * K, B * K
