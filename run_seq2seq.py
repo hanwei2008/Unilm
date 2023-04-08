@@ -381,7 +381,7 @@ def main():
                     optimizer.zero_grad()
                     global_step += 1
 
-                if step%(n_batch//5) == 0:
+                if step>0 and step%(n_batch//5) == 0:
                     # Save a trained model
                     if (args.local_rank == -1 or torch.distributed.get_rank() == 0):
                         logger.info(
@@ -389,17 +389,17 @@ def main():
                         model_to_save = model.module if hasattr(
                             model, 'module') else model  # Only save the model it-self
                         output_model_file = os.path.join(
-                            args.output_dir, "model.{0}.bin".format(i_epoch-1+step/n_batch))
+                            args.output_dir, "model_{0}.bin".format(i_epoch-1+step/n_batch))
                         torch.save(model_to_save.state_dict(), output_model_file)
                         output_optim_file = os.path.join(
-                            args.output_dir, "optim.{0}.bin".format(i_epoch-1+step/n_batch))
+                            args.output_dir, "optim_{0}.bin".format(i_epoch-1+step/n_batch))
                         torch.save(optimizer.state_dict(), output_optim_file)
                         if args.fp16:
                             output_amp_file = os.path.join(
-                                args.output_dir, "amp.{0}.bin".format(i_epoch-1+step/n_batch))
+                                args.output_dir, "amp_{0}.bin".format(i_epoch-1+step/n_batch))
                             torch.save(amp.state_dict(), output_amp_file)
                         output_sched_file = os.path.join(
-                            args.output_dir, "sched.{0}.bin".format(i_epoch-1+step/n_batch))
+                            args.output_dir, "sched_{0}.bin".format(i_epoch-1+step/n_batch))
                         torch.save(scheduler.state_dict(), output_sched_file)
 
                         logger.info("***** CUDA.empty_cache() *****")
