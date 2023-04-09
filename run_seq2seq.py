@@ -86,6 +86,8 @@ def main():
                         help="max position embeddings")
     parser.add_argument("--do_train", action='store_true',
                         help="Whether to run training.")
+    parser.add_argument("--num_samples", default=None, type=int,
+                        help='采样大小')
     parser.add_argument("--parallel", action='store_true',
                         help="Whether to parallel training.")
     parser.add_argument("--do_eval", action='store_true',
@@ -230,10 +232,10 @@ def main():
         train_dataset = utils_seq2seq.Seq2SeqDataset(
             file, args.train_batch_size, data_tokenizer, args.max_seq_length, bi_uni_pipeline=bi_uni_pipeline, src_desc=args.src_desc, tgt_desc=args.tgt_desc)
         if args.local_rank == -1:
-            train_sampler = RandomSampler(train_dataset, replacement=False)
+            train_sampler = RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples)
             _batch_size = args.train_batch_size
         else:
-            train_sampler = DistributedSampler(train_dataset)
+            train_sampler = DistributedSampler(RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples))
             _batch_size = args.train_batch_size // dist.get_world_size()
         train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=_batch_size, sampler=train_sampler,
                                                        num_workers=args.num_workers, collate_fn=utils_seq2seq.batch_list_to_batch_tensors, pin_memory=False)

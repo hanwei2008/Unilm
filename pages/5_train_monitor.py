@@ -16,19 +16,18 @@ st.set_page_config(
 st.title('模型监控')
 
 
-cmd = st.text_area(label="输入日志查看命令", value='tail -n1 data/log_train_job2title.txt', height = 50, placeholder="日志查看命令")
-logtxtbox = st.empty()
+cmd = st.text_area(label="输入日志查看命令", value='tail -c100 data/log_train_job2title.txt', height = 50, placeholder="日志查看命令")
 
 col1, col2, col3 = st.columns([3,3,8])
-is_start = col1.button("开始查看", key="run")
-is_stop = col2.button("停止查看", key="stop")
+bt = col1.empty()
+is_start = bt.button("开始查看", key="run")
+logtxtbox = st.empty()
 if is_start:
-    #pro = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
+    is_stop = bt.button("停止查看", key="stop")
     while True:
+        if is_stop:
+            is_start = bt.button("开始查看", key="run_1")
+            break
         output = subprocess.getoutput(cmd)
         logtxtbox.info(output)
-        if is_stop:
-            break
-        else:
-            time.sleep(0.1)
-
+        time.sleep(0.1)
