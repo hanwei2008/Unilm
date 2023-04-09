@@ -186,7 +186,7 @@ def main():
     else:
         torch.cuda.set_device(args.local_rank)
         device = torch.device("cuda", args.local_rank)
-        n_gpu = 1
+        n_gpu = torch.cuda.device_count()
         # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
         dist.init_process_group(backend='nccl')
 
@@ -227,12 +227,13 @@ def main():
         print("Loading Train Dataset", args.data_dir)
         bi_uni_pipeline = [utils_seq2seq.Preprocess4Seq2seq(args.max_pred, args.mask_prob, list(tokenizer.vocab.keys()), tokenizer.convert_tokens_to_ids, args.max_seq_length, mask_source_words=False, skipgram_prb=args.skipgram_prb, skipgram_size=args.skipgram_size, mask_whole_word=args.mask_whole_word, tokenizer=data_tokenizer, use_bert=args.use_bert)]
 
-        if n_gpu>1:
-            file = os.path.join(
-                args.data_dir, args.src_file, args.local_rank)
-        else:
-            file = os.path.join(
-                args.data_dir, args.src_file if args.src_file else 'train.tgt')
+        #if n_gpu>1:
+        #    file = os.path.join(
+        #        args.data_dir, args.src_file, str(args.local_rank))
+        #    print('train file name'+str(file))
+        #else:
+        file = os.path.join(
+            args.data_dir, args.src_file if args.src_file else 'train.tgt')
         train_dataset = utils_seq2seq.Seq2SeqDataset(
             file, args.train_batch_size, data_tokenizer, args.max_seq_length, bi_uni_pipeline=bi_uni_pipeline, src_desc=args.src_desc, tgt_desc=args.tgt_desc)
         if args.local_rank == -1:

@@ -7,6 +7,7 @@ import math
 import numpy as np
 import torch
 import torch.utils.data
+import json
 
 
 
@@ -234,26 +235,30 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
         #         self.ex_list.append((src_tk, tgt_tk))
 
         file_data = open(file, "r", encoding='utf-8')
-        lines = file_data.readlines()
-        threads = min(16, cpu_count())
-        with Pool(threads) as p:
-            annotate_ = partial(
-                self.read_data,
-                tokenizer=self.tokenizer)
-            self.ex_list = list(
-                tqdm(
-                    p.imap(annotate_, lines, chunksize=32),
-                    total=len(lines),
-                    desc="convert squad examples to features",
-                )
-            )
-        # fin = open("look_new.json", "w",encoding="utf-8")
+        self.ex_list = []
+        for line in tqdm(file_data, total=7943878*2):
+           self.ex_list.append(self.read_data(line, self.tokenizer))
+
+        #lines = file_data.readlines()
+        #threads = min(4, cpu_count())
+        #with Pool(threads) as p:
+        #    annotate_ = partial(
+        #        self.read_data,
+        #        tokenizer=self.tokenizer)
+        #    self.ex_list = list(
+        #        tqdm(
+        #            p.imap(annotate_, lines, chunksize=32),
+        #            total=len(lines),
+        #            desc="convert squad examples to features",
+        #        )
+        #    )
+        ## fin = open("look_new.json", "w",encoding="utf-8")
         # for jj, m in enumerate(self.ex_list):
         #     fin.write(str(jj)+"\t"+str(m)+"\n")
         print('Load {0} documents'.format(len(self.ex_list)))
         # exit()
     def read_data(self, line, tokenizer):
-        sample = eval(line.strip())
+        sample = json.loads(line.strip())
         # src_tk = tokenizer.tokenize(sample["src_text"])
         # tgt_tk = tokenizer.tokenize(sample["tgt_text"])
         src_tk = sample[self.src_desc]
