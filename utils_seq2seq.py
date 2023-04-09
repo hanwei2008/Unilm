@@ -236,7 +236,7 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
 
         file_data = open(file, "r", encoding='utf-8')
         self.ex_list = []
-        for line in tqdm(file_data, total=7943878*2):
+        for line in tqdm(file_data, total=7943878):
            self.ex_list.append(self.read_data(line, self.tokenizer))
 
         #lines = file_data.readlines()

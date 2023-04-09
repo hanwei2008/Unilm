@@ -227,20 +227,21 @@ def main():
         print("Loading Train Dataset", args.data_dir)
         bi_uni_pipeline = [utils_seq2seq.Preprocess4Seq2seq(args.max_pred, args.mask_prob, list(tokenizer.vocab.keys()), tokenizer.convert_tokens_to_ids, args.max_seq_length, mask_source_words=False, skipgram_prb=args.skipgram_prb, skipgram_size=args.skipgram_size, mask_whole_word=args.mask_whole_word, tokenizer=data_tokenizer, use_bert=args.use_bert)]
 
-        #if n_gpu>1:
-        #    file = os.path.join(
-        #        args.data_dir, args.src_file, str(args.local_rank))
-        #    print('train file name'+str(file))
-        #else:
-        file = os.path.join(
-            args.data_dir, args.src_file if args.src_file else 'train.tgt')
+        if n_gpu>1:
+            file = os.path.join(
+                args.data_dir, args.src_file, str(args.local_rank))
+            logger.info('train filename: '+str(file))
+        else:
+            file = os.path.join(
+                args.data_dir, args.src_file if args.src_file else 'train.tgt')
         train_dataset = utils_seq2seq.Seq2SeqDataset(
             file, args.train_batch_size, data_tokenizer, args.max_seq_length, bi_uni_pipeline=bi_uni_pipeline, src_desc=args.src_desc, tgt_desc=args.tgt_desc)
         if args.local_rank == -1:
             train_sampler = RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples)
             _batch_size = args.train_batch_size
         else:
-            train_sampler = DistributedSampler(RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples))
+            #train_sampler = DistributedSampler(RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples))
+            train_sampler = RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples)
             _batch_size = args.train_batch_size // dist.get_world_size()
         train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=_batch_size, sampler=train_sampler,
                                                        num_workers=args.num_workers, collate_fn=utils_seq2seq.batch_list_to_batch_tensors, pin_memory=False)
@@ -330,11 +331,13 @@ def main():
 
     logger.info("***** CUDA.empty_cache() *****")
     torch.cuda.empty_cache()
+    gc.collect()
 
     if args.do_train:
         logger.info("***** Running training *****")
-        logger.info("  Batch size = %d", args.train_batch_size)
-        logger.info("  Num steps = %d", t_total)
+        if args.local_rank not in (-1, 0):
+            logger.info("  Batch size = %d", args.train_batch_size)
+            logger.info("  Num steps = %d", t_total/dist.get_world_size())
 
         model.train()
         if recover_step:
@@ -343,7 +346,8 @@ def main():
             start_epoch = 1
         for i_epoch in trange(start_epoch, int(args.num_train_epochs)+1, desc="Epoch", disable=args.local_rank not in (-1, 0)):
             if args.local_rank != -1:
-                train_sampler.set_epoch(i_epoch)
+                #train_sampler.set_epoch(i_epoch)
+                pass
             iter_bar = tqdm(train_dataloader, desc='Iter %d(loss=X.XXX)'%i_epoch,
                             disable=args.local_rank not in (-1, 0))
             n_batch = len(train_dataloader)
@@ -411,6 +415,7 @@ def main():
 
                         logger.info("***** CUDA.empty_cache() *****")
                         torch.cuda.empty_cache()
+                        gc.collect()
 
 
 if __name__ == "__main__":
