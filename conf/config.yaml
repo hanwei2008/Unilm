@@ -1,0 +1,13 @@
+credentials:
+  usernames:
+    hanwei:
+      email: hanwei2008123@163.com
+      name: 韩伟
+      password: $2b$12$3/cMPaRNQKyE5l5Zk6U0su2A5KdY3W3hZDMdKk1.mRvYK/b.18UKy # To be replaced with hashed password
+cookie:
+  expiry_days: 30
+  key: some_signature_key # Must be string
+  name: some_cookie_name
+preauthorized:
+  emails:
+  - waterfling2008@gmail.com
