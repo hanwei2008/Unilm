@@ -335,9 +335,8 @@ def main():
 
     if args.do_train:
         logger.info("***** Running training *****")
-        if args.local_rank not in (-1, 0):
-            logger.info("  Batch size = %d", args.train_batch_size)
-            logger.info("  Num steps = %d", t_total/dist.get_world_size())
+        logger.info("  Batch size = %d", args.train_batch_size)
+        logger.info("  Num steps = %d", t_total/dist.get_world_size())
 
         model.train()
         if recover_step:
