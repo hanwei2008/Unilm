@@ -28,7 +28,7 @@ def gen_text(input_text, up=weibo_summary_up, beam_size=1):
 
 input_text = st.text_area(label="输入微博内容", value='''?工资日结每天270元！空调车间，工资高，环境好！上海汽配厂招缝纫工：男女不限，18-45周岁，免费工作餐，住宿每月290元！生产汽车安全气囊
 电话：微信同步 班！联系电话微信同步''', height = 200, placeholder="微博正文")
-beam_size = st.slider('Beam Size', 1, 8, 1)
+beam_size = st.slider('Beam Size', 1, 8, 4)
 
 if st.button("生成", key="predict"):
     start=time.time()

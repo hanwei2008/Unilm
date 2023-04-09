@@ -38,7 +38,7 @@ input_query = st.text_area(label="输入招工详情", value='''招聘
 提供餐补贴10元
 晋升空间：操作工**小组长**班长;转正后可交五险一金。
 联系电话：''', height = 300, placeholder="招工详情")
-beam_size = st.slider('Beam Size', 1, 8, 1)
+beam_size = st.slider('Beam Size', 1, 8, 4)
 
 if st.button("生成", key="predict"):
     start=time.time()

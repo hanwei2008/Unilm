@@ -27,7 +27,7 @@ def gen_text(input_text, up=query2queries_up, beam_size=1):
     return output_text
 
 input_query = st.text_area(label="输入query", value="大白", height = 100, placeholder="在这里输入query")
-beam_size = st.slider('Beam Size', 1, 8, 1)
+beam_size = st.slider('Beam Size', 1, 8, 4)
 
 if st.button("生成", key="predict"):
     start=time.time()
