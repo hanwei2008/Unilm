@@ -235,7 +235,7 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
 
         file_data = open(file, "r", encoding='utf-8')
         #
-        threads = min(8, cpu_count())
+        threads = min(16, cpu_count())
         with Pool(threads) as p:
             annotate_ = partial(
                 self.read_data,
