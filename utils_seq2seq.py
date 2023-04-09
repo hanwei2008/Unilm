@@ -234,7 +234,7 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
         #         self.ex_list.append((src_tk, tgt_tk))
 
         file_data = open(file, "r", encoding='utf-8')
-        #
+        lines = file_data.readlines()
         threads = min(16, cpu_count())
         with Pool(threads) as p:
             annotate_ = partial(
@@ -242,8 +242,8 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
                 tokenizer=self.tokenizer)
             self.ex_list = list(
                 tqdm(
-                    p.imap(annotate_, file_data.readlines(), chunksize=32),
-                    total=len(file_data.readlines()),
+                    p.imap(annotate_, lines, chunksize=32),
+                    total=len(lines),
                     desc="convert squad examples to features",
                 )
             )
