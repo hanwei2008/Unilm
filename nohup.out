@@ -1,0 +1,388 @@
+/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py:181: FutureWarning: The module torch.distributed.launch is deprecated
+and will be removed in future. Use torchrun.
+Note that --use-env is set by default in torchrun.
+If your script expects `--local-rank` argument to be set, please
+change it to read from `os.environ['LOCAL_RANK']` instead. See 
+https://pytorch.org/docs/stable/distributed.html#launch-utility for 
+further instructions
+
+  warnings.warn(
+WARNING:torch.distributed.run:
+*****************************************
+Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+*****************************************
+04/09/2023 13:15:31 - INFO - torch.distributed.distributed_c10d -   Added key: store_based_barrier_key:1 to store for rank: 1
+04/09/2023 13:15:31 - INFO - torch.distributed.distributed_c10d -   Added key: store_based_barrier_key:1 to store for rank: 0
+04/09/2023 13:15:31 - INFO - torch.distributed.distributed_c10d -   Rank 0: Completed store-based barrier for key:store_based_barrier_key:1 with 2 nodes.
+04/09/2023 13:15:31 - INFO - __main__ -   device: cuda:0 n_gpu: 1, distributed training: True, 16-bits training: False
+04/09/2023 13:15:31 - INFO - torch.distributed.distributed_c10d -   Rank 1: Completed store-based barrier for key:store_based_barrier_key:1 with 2 nodes.
+04/09/2023 13:15:31 - INFO - __main__ -   device: cuda:1 n_gpu: 1, distributed training: True, 16-bits training: False
+Loading Train Dataset /data_slow/common/dataset/nlp/job_hunting/job2title
+Loading Train Dataset /data_slow/common/dataset/nlp/job_hunting/job2title
+convert squad examples to features: 0it [00:00, ?it/s]convert squad examples to features: 0it [00:00, ?it/s]convert squad examples to features: 449it [00:00, 3915.92it/s]convert squad examples to features: 225it [00:00, 2097.57it/s]convert squad examples to features: 1000it [00:00, 4860.50it/s]
+Load 1000 documents
+convert squad examples to features: 673it [00:00, 3119.88it/s]convert squad examples to features: 1000it [00:00, 4104.88it/s]
+Load 1000 documents
+Some weights of the model checkpoint at /data_slow/common/pretrain/torch_unilm_model were not used when initializing UnilmForSeq2Seq: ['cls2.seq_relationship.bias', 'cls2.seq_relationship.weight']
+- This IS expected if you are initializing UnilmForSeq2Seq from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing UnilmForSeq2Seq from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+Some weights of UnilmForSeq2Seq were not initialized from the model checkpoint at /data_slow/common/pretrain/torch_unilm_model and are newly initialized: ['bert.embeddings.position_ids']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+Some weights of the model checkpoint at /data_slow/common/pretrain/torch_unilm_model were not used when initializing UnilmForSeq2Seq: ['cls2.seq_relationship.weight', 'cls2.seq_relationship.bias']
+- This IS expected if you are initializing UnilmForSeq2Seq from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing UnilmForSeq2Seq from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+Some weights of UnilmForSeq2Seq were not initialized from the model checkpoint at /data_slow/common/pretrain/torch_unilm_model and are newly initialized: ['bert.embeddings.position_ids']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+04/09/2023 13:15:33 - INFO - __main__ -   ***** CUDA.empty_cache() *****
+04/09/2023 13:15:33 - INFO - __main__ -   ***** CUDA.empty_cache() *****
+WARNING:torch.distributed.elastic.agent.server.api:Received 2 death signal, shutting down workers
+WARNING:torch.distributed.elastic.multiprocessing.api:Sending process 2370578 closing signal SIGINT
+WARNING:torch.distributed.elastic.multiprocessing.api:Sending process 2370579 closing signal SIGINT
+Traceback (most recent call last):
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 400, in <module>
+    main()
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 322, in main
+    torch.cuda.empty_cache()
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/cuda/memory.py", line 133, in empty_cache
+Traceback (most recent call last):
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 400, in <module>
+    main()
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 322, in main
+    torch.cuda.empty_cache()
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/cuda/memory.py", line 133, in empty_cache
+        torch._C._cuda_emptyCache()torch._C._cuda_emptyCache()
+
+KeyboardInterruptKeyboardInterrupt
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 196, in <module>
+    main()
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 192, in main
+    launch(args)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 177, in launch
+    run(args)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/run.py", line 785, in run
+    elastic_launch(
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 134, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 241, in launch_agent
+    result = agent.run()
+             ^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/metrics/api.py", line 129, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 723, in run
+    result = self._invoke_run(role)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 864, in _invoke_run
+    time.sleep(monitor_interval)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 62, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 2370549 got signal: 2
+/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py:181: FutureWarning: The module torch.distributed.launch is deprecated
+and will be removed in future. Use torchrun.
+Note that --use-env is set by default in torchrun.
+If your script expects `--local-rank` argument to be set, please
+change it to read from `os.environ['LOCAL_RANK']` instead. See 
+https://pytorch.org/docs/stable/distributed.html#launch-utility for 
+further instructions
+
+  warnings.warn(
+WARNING:torch.distributed.run:
+*****************************************
+Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+*****************************************
+04/09/2023 13:18:08 - INFO - torch.distributed.distributed_c10d -   Added key: store_based_barrier_key:1 to store for rank: 1
+04/09/2023 13:18:08 - INFO - torch.distributed.distributed_c10d -   Added key: store_based_barrier_key:1 to store for rank: 0
+04/09/2023 13:18:08 - INFO - torch.distributed.distributed_c10d -   Rank 1: Completed store-based barrier for key:store_based_barrier_key:1 with 2 nodes.
+04/09/2023 13:18:08 - INFO - torch.distributed.distributed_c10d -   Rank 0: Completed store-based barrier for key:store_based_barrier_key:1 with 2 nodes.
+04/09/2023 13:18:08 - INFO - __main__ -   device: cuda:1 n_gpu: 1, distributed training: True, 16-bits training: False
+04/09/2023 13:18:08 - INFO - __main__ -   device: cuda:0 n_gpu: 1, distributed training: True, 16-bits training: False
+WARNING:torch.distributed.elastic.agent.server.api:Received 2 death signal, shutting down workers
+WARNING:torch.distributed.elastic.multiprocessing.api:Sending process 2372119 closing signal SIGINT
+WARNING:torch.distributed.elastic.multiprocessing.api:Sending process 2372120 closing signal SIGINT
+Traceback (most recent call last):
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 400, in <module>
+Traceback (most recent call last):
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 400, in <module>
+        main()main()
+
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 219, in main
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 210, in main
+    dist.barrier()    
+dist.barrier()
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py", line 3313, in barrier
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py", line 3313, in barrier
+        work = default_pg.barrier(opts=opts)work = default_pg.barrier(opts=opts)
+
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+KeyboardInterruptKeyboardInterrupt
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 196, in <module>
+    main()
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 192, in main
+    launch(args)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 177, in launch
+    run(args)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/run.py", line 785, in run
+    elastic_launch(
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 134, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 241, in launch_agent
+    result = agent.run()
+             ^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/metrics/api.py", line 129, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 723, in run
+    result = self._invoke_run(role)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 864, in _invoke_run
+    time.sleep(monitor_interval)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 62, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 2372090 got signal: 2
+/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py:181: FutureWarning: The module torch.distributed.launch is deprecated
+and will be removed in future. Use torchrun.
+Note that --use-env is set by default in torchrun.
+If your script expects `--local-rank` argument to be set, please
+change it to read from `os.environ['LOCAL_RANK']` instead. See 
+https://pytorch.org/docs/stable/distributed.html#launch-utility for 
+further instructions
+
+  warnings.warn(
+WARNING:torch.distributed.run:
+*****************************************
+Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+*****************************************
+Traceback (most recent call last):
+WARNING:torch.distributed.elastic.agent.server.api:Received 2 death signal, shutting down workers
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 13, in <module>
+Traceback (most recent call last):
+    import torch
+WARNING:torch.distributed.elastic.multiprocessing.api:Sending process 2374903 closing signal SIGINT
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 13, in <module>
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/__init__.py", line 1239, in <module>
+WARNING:torch.distributed.elastic.multiprocessing.api:Sending process 2374904 closing signal SIGINT
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/onnx/__init__.py", line 12, in <module>
+object address  : 0x7fb2c8c8da80
+object refcount : 2
+object type     : 0x877320
+object type name: KeyboardInterrupt
+object repr     : KeyboardInterrupt()
+lost sys.stderr
+    from . import (  # usort:skip. Keep the order instead of sorting lexicographically
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/onnx/symbolic_opset11.py", line 12, in <module>
+    from torch.onnx import (
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/onnx/utils.py", line 34, in <module>
+    import torch.jit._trace
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/jit/__init__.py", line 38, in <module>
+    from torch.jit._trace import (
+  File "<frozen importlib._bootstrap>", line 1178, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1149, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1069, in get_code
+  File "<frozen importlib._bootstrap_external>", line 729, in _compile_bytecode
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 196, in <module>
+    main()
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 192, in main
+    launch(args)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 177, in launch
+    run(args)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/run.py", line 785, in run
+    elastic_launch(
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 134, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 241, in launch_agent
+    result = agent.run()
+             ^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/metrics/api.py", line 129, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 723, in run
+    result = self._invoke_run(role)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 864, in _invoke_run
+    time.sleep(monitor_interval)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 62, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 2374874 got signal: 2
+/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py:181: FutureWarning: The module torch.distributed.launch is deprecated
+and will be removed in future. Use torchrun.
+Note that --use-env is set by default in torchrun.
+If your script expects `--local-rank` argument to be set, please
+change it to read from `os.environ['LOCAL_RANK']` instead. See 
+https://pytorch.org/docs/stable/distributed.html#launch-utility for 
+further instructions
+
+  warnings.warn(
+WARNING:torch.distributed.run:
+*****************************************
+Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+*****************************************
+WARNING:torch.distributed.elastic.agent.server.api:Received 2 death signal, shutting down workers
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 18, in <module>
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/run_seq2seq.py", line 18, in <module>
+WARNING:torch.distributed.elastic.multiprocessing.api:Sending process 2380626 closing signal SIGINT
+        from tokenization_unilm import UnilmTokenizer, WhitespaceTokenizer
+object address  : 0x7f8e56ce7880
+object refcount : 2
+object type     : 0x877320
+object type name: KeyboardInterrupt
+object repr     : KeyboardInterrupt()
+lost sys.stderr
+WARNING:torch.distributed.elastic.multiprocessing.api:Sending process 2380627 closing signal SIGINT
+  File "/data_slow/hanwei/code/ai/nlp/pretrain/Unilm/tokenization_unilm.py", line 8, in <module>
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/transformers/__init__.py", line 26, in <module>
+    from . import dependency_versions_check
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/transformers/dependency_versions_check.py", line 17, in <module>
+    from .utils.versions import require_version, require_version_core
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/transformers/utils/__init__.py", line 30, in <module>
+    from .generic import (
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/transformers/utils/generic.py", line 29, in <module>
+    from .import_utils import is_flax_available, is_tf_available, is_torch_available, is_torch_fx_proxy
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/transformers/utils/import_utils.py", line 32, in <module>
+    from . import logging
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/transformers/utils/logging.py", line 35, in <module>
+    import huggingface_hub.utils as hf_hub_utils
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/huggingface_hub/utils/__init__.py", line 32, in <module>
+    from ._errors import (
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/huggingface_hub/utils/_errors.py", line 3, in <module>
+    from requests import HTTPError, Response
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/requests/__init__.py", line 45, in <module>
+    from .exceptions import RequestsDependencyWarning
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/requests/exceptions.py", line 9, in <module>
+    from .compat import JSONDecodeError as CompatJSONDecodeError
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/requests/compat.py", line 47, in <module>
+    from http import cookiejar as cookielib
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/http/cookiejar.py", line 211, in <module>
+    LOOSE_HTTP_DATE_RE = re.compile(
+                         ^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/re/__init__.py", line 227, in compile
+    return _compile(pattern, flags)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/re/__init__.py", line 294, in _compile
+    p = _compiler.compile(pattern, flags)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/re/_compiler.py", line 743, in compile
+    p = _parser.parse(p, flags)
+        ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/re/_parser.py", line 980, in parse
+    p = _parse_sub(source, state, flags & SRE_FLAG_VERBOSE, 0)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/re/_parser.py", line 455, in _parse_sub
+    itemsappend(_parse(source, state, verbose, nested + 1,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/re/_parser.py", line 863, in _parse
+    p = _parse_sub(source, state, sub_verbose, nested + 1)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/re/_parser.py", line 455, in _parse_sub
+    itemsappend(_parse(source, state, verbose, nested + 1,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/re/_parser.py", line 636, in _parse
+    here = source.tell()
+           ^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/re/_parser.py", line 284, in tell
+    def tell(self):
+
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 196, in <module>
+    main()
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 192, in main
+    launch(args)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 177, in launch
+    run(args)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/run.py", line 785, in run
+    elastic_launch(
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 134, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 241, in launch_agent
+    result = agent.run()
+             ^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/metrics/api.py", line 129, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 723, in run
+    result = self._invoke_run(role)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 864, in _invoke_run
+    time.sleep(monitor_interval)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 62, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 2380592 got signal: 2
+/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py:181: FutureWarning: The module torch.distributed.launch is deprecated
+and will be removed in future. Use torchrun.
+Note that --use-env is set by default in torchrun.
+If your script expects `--local-rank` argument to be set, please
+change it to read from `os.environ['LOCAL_RANK']` instead. See 
+https://pytorch.org/docs/stable/distributed.html#launch-utility for 
+further instructions
+
+  warnings.warn(
+WARNING:torch.distributed.run:
+*****************************************
+Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+*****************************************
+[W socket.cpp:426] [c10d] The server socket has failed to bind to [::]:12355 (errno: 98 - Address already in use).
+[W socket.cpp:426] [c10d] The server socket has failed to bind to 0.0.0.0:12355 (errno: 98 - Address already in use).
+[E socket.cpp:462] [c10d] The server socket has failed to listen on any local network address.
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 196, in <module>
+    main()
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 192, in main
+    launch(args)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launch.py", line 177, in launch
+    run(args)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/run.py", line 785, in run
+    elastic_launch(
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 134, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 241, in launch_agent
+    result = agent.run()
+             ^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/metrics/api.py", line 129, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 723, in run
+    result = self._invoke_run(role)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 858, in _invoke_run
+    self._initialize_workers(self._worker_group)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/metrics/api.py", line 129, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 692, in _initialize_workers
+    self._rendezvous(worker_group)
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/metrics/api.py", line 129, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 546, in _rendezvous
+    store, group_rank, group_world_size = spec.rdzv_handler.next_rendezvous()
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hanwei/miniconda3/envs/py311-dl/lib/python3.11/site-packages/torch/distributed/elastic/rendezvous/static_tcp_rendezvous.py", line 55, in next_rendezvous
+    self._store = TCPStore(  # type: ignore[call-arg]
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: The server socket has failed to listen on any local network address. The server socket has failed to bind to [::]:12355 (errno: 98 - Address already in use). The server socket has failed to bind to 0.0.0.0:12355 (errno: 98 - Address already in use).

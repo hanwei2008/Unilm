@@ -20,6 +20,9 @@ from modeling_unilm import UnilmForSeq2Seq, UnilmConfig
 from transformers import get_linear_schedule_with_warmup
 from torch.optim import AdamW
 
+import gc
+import time
+
 import utils_seq2seq
 
 ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys())
@@ -114,7 +117,7 @@ def main():
                         help="Dropout rate for attention probabilities.")
     parser.add_argument("--no_cuda", action='store_true',
                         help="Whether not to use CUDA when available")
-    parser.add_argument("--local_rank", type=int, default=-1,
+    parser.add_argument("--local-rank", type=int, default=-1,
                         help="local_rank for distributed training on gpus")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
@@ -174,27 +177,17 @@ def main():
     json.dump(args.__dict__, open(os.path.join(
         args.output_dir, 'opt.json'), 'w'), sort_keys=True, indent=2)
 
-    print('local_rank: ', args.local_rank)
-    print('no_cuda: ', args.no_cuda)
-    #if args.local_rank == -1 or args.no_cuda:
-    if args.no_cuda:
-        #device = torch.device(
-        #    "cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
-        device = torch.device("cpu")
-        #n_gpu = torch.cuda.device_count() if not args.no_cuda else 0
-        n_gpu = 0
+    if args.local_rank == -1 or args.no_cuda:
+        device = torch.device(
+            "cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+        n_gpu = torch.cuda.device_count()
     else:
-        #torch.cuda.set_device(args.local_rank)
-        if not args.parallel:
-            torch.cuda.set_device(0)
-            device = torch.device("cuda", 0)
-            n_gpu = 1
-        else:
-            device = torch.device("cuda")
-            n_gpu = torch.cuda.device_count()
-        #device = torch.device("cuda", args.local_rank)
+        torch.cuda.set_device(args.local_rank)
+        device = torch.device("cuda", args.local_rank)
+        n_gpu = 1
         # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
-        #dist.init_process_group(backend='nccl')
+        dist.init_process_group(backend='nccl')
+
     logger.info("device: {} n_gpu: {}, distributed training: {}, 16-bits training: {}".format(
         device, n_gpu, bool(args.local_rank != -1), args.fp16))
 
@@ -348,40 +341,47 @@ def main():
                             disable=args.local_rank not in (-1, 0))
             n_batch = len(train_dataloader)
             for step, batch in enumerate(iter_bar):
-                batch = [
-                    t.to(device) if t is not None else None for t in batch]
-                input_ids, segment_ids, input_mask, lm_label_ids, masked_pos, masked_weights, _ = batch
-                masked_lm_loss = model(input_ids, segment_ids, input_mask, lm_label_ids,
-                                       masked_pos=masked_pos, masked_weights=masked_weights)
-                if n_gpu > 1:    # mean() to average on multi-gpu.
-                    # loss = loss.mean()
-                    masked_lm_loss = masked_lm_loss.mean()
-                loss = masked_lm_loss
+                try:
+                    batch = [
+                        t.to(device) if t is not None else None for t in batch]
+                    input_ids, segment_ids, input_mask, lm_label_ids, masked_pos, masked_weights, _ = batch
+                    masked_lm_loss = model(input_ids, segment_ids, input_mask, lm_label_ids,
+                                           masked_pos=masked_pos, masked_weights=masked_weights)
+                    if n_gpu > 1:    # mean() to average on multi-gpu.
+                        # loss = loss.mean()
+                        masked_lm_loss = masked_lm_loss.mean()
+                    loss = masked_lm_loss
 
-                # logging for each step (i.e., before normalization by args.gradient_accumulation_steps)
-                iter_bar.set_description('Iter %d(loss=%5.3f)' % (i_epoch,loss.item()))
+                    # logging for each step (i.e., before normalization by args.gradient_accumulation_steps)
+                    iter_bar.set_description('Iter %d(loss=%5.3f)' % (i_epoch,loss.item()))
 
-                # ensure that accumlated gradients are normalized
-                if args.gradient_accumulation_steps > 1:
-                    loss = loss / args.gradient_accumulation_steps
+                    # ensure that accumlated gradients are normalized
+                    if args.gradient_accumulation_steps > 1:
+                        loss = loss / args.gradient_accumulation_steps
 
-                if args.fp16:
-                    with amp.scale_loss(loss, optimizer) as scaled_loss:
-                        scaled_loss.backward()
-                    torch.nn.utils.clip_grad_norm_(
-                        amp.master_params(optimizer), args.max_grad_norm)
-                else:
-                    loss.backward()
-                    torch.nn.utils.clip_grad_norm_(
-                        model.parameters(), args.max_grad_norm)
+                    if args.fp16:
+                        with amp.scale_loss(loss, optimizer) as scaled_loss:
+                            scaled_loss.backward()
+                        torch.nn.utils.clip_grad_norm_(
+                            amp.master_params(optimizer), args.max_grad_norm)
+                    else:
+                        loss.backward()
+                        torch.nn.utils.clip_grad_norm_(
+                            model.parameters(), args.max_grad_norm)
 
-                if (step + 1) % args.gradient_accumulation_steps == 0:
-                    optimizer.step()
-                    scheduler.step()  # Update learning rate schedule
-                    optimizer.zero_grad()
-                    global_step += 1
+                    if (step + 1) % args.gradient_accumulation_steps == 0:
+                        optimizer.step()
+                        scheduler.step()  # Update learning rate schedule
+                        optimizer.zero_grad()
+                        global_step += 1
+                except RuntimeError as e:  # PyTorch的OOM属于RuntimeError
+                    logger.warn(str(e))
+                    gc.collect()
+                    torch.cuda.empty_cache()
+                    time.sleep(5)
+                    continue
 
-                if step>0 and step%(n_batch//5) == 0:
+                if tep>0 and step%(n_batch//5) == 0:
                     # Save a trained model
                     if (args.local_rank == -1 or torch.distributed.get_rank() == 0):
                         logger.info(

@@ -18,7 +18,7 @@ import json
 
 st.set_page_config(
     page_title="NLG demo",
-    page_icon=":robot:"
+    page_icon="🏠"
 )
 
 st.title('文本生成模型 Demo')
