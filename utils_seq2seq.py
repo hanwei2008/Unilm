@@ -234,10 +234,15 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
         #         assert len(tgt_tk) > 0
         #         self.ex_list.append((src_tk, tgt_tk))
 
-        file_data = open(file, "r", encoding='utf-8')
-        self.ex_list = []
-        for line in tqdm(file_data, total=7943878):
-           self.ex_list.append(self.read_data(line, self.tokenizer))
+        with open(file, "r", encoding='utf-8') as file_data:
+            self.ex_list = []
+            for line in tqdm(file_data, total=7943878):
+                instance = self.read_data(line, self.tokenizer)
+                # proc = choice(self.bi_uni_pipeline)
+                new_instance = ()
+                for proc in self.bi_uni_pipeline:
+                    new_instance += proc(instance)
+               self.ex_list.append(instance)
 
         #lines = file_data.readlines()
         #threads = min(4, cpu_count())
@@ -270,11 +275,13 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         instance = self.ex_list[idx]
-        # proc = choice(self.bi_uni_pipeline)
-        new_instance = ()
-        for proc in self.bi_uni_pipeline:
-            new_instance += proc(instance)
-        return new_instance
+        ## proc = choice(self.bi_uni_pipeline)
+        #new_instance = ()
+        #for proc in self.bi_uni_pipeline:
+        #    new_instance += proc(instance)
+        #return new_instance
+
+        return instance
 
     def __iter__(self):  # iterator to load data
         for __ in range(math.ceil(len(self.ex_list) / float(self.batch_size))):
