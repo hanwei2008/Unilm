@@ -244,7 +244,7 @@ def main():
             train_sampler = RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples)
             _batch_size = args.train_batch_size // dist.get_world_size()
         train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=_batch_size, sampler=train_sampler,
-                                                       num_workers=args.num_workers, collate_fn=utils_seq2seq.batch_list_to_batch_tensors, pin_memory=False)
+                                                       num_workers=args.num_workers, collate_fn=utils_seq2seq.batch_list_to_batch_tensors, pin_memory=True)
 
     # note: args.train_batch_size has been changed to (/= args.gradient_accumulation_steps)
     # t_total = int(math.ceil(len(train_dataset.ex_list) / args.train_batch_size)
