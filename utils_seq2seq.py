@@ -28,6 +28,7 @@ def batch_list_to_batch_tensors(batch):
                 batch_tensors.append(torch.tensor(x, dtype=torch.long))
             except:
                 batch_tensors.append(None)
+
     return batch_tensors
 
 
@@ -234,15 +235,10 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
         #         assert len(tgt_tk) > 0
         #         self.ex_list.append((src_tk, tgt_tk))
 
-        with open(file, "r", encoding='utf-8') as file_data:
-            self.ex_list = []
-            for line in tqdm(file_data, total=7943878):
-                instance = self.read_data(line, self.tokenizer)
-                # proc = choice(self.bi_uni_pipeline)
-                new_instance = ()
-                for proc in self.bi_uni_pipeline:
-                    new_instance += proc(instance)
-               self.ex_list.append(instance)
+        file_data = open(file, "r", encoding='utf-8')
+        self.ex_list = []
+        for line in tqdm(file_data):
+           self.ex_list.append(self.read_data(line, self.tokenizer))
 
         #lines = file_data.readlines()
         #threads = min(4, cpu_count())
@@ -275,22 +271,20 @@ class Seq2SeqDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         instance = self.ex_list[idx]
-        ## proc = choice(self.bi_uni_pipeline)
-        #new_instance = ()
-        #for proc in self.bi_uni_pipeline:
-        #    new_instance += proc(instance)
-        #return new_instance
+        # proc = choice(self.bi_uni_pipeline)
+        new_instance = ()
+        for proc in self.bi_uni_pipeline:
+            new_instance += proc(instance)
+        return new_instance
 
-        return instance
-
-    def __iter__(self):  # iterator to load data
-        for __ in range(math.ceil(len(self.ex_list) / float(self.batch_size))):
-            batch = []
-            for __ in range(self.batch_size):
-                idx = randint(0, len(self.ex_list)-1)
-                batch.append(self.__getitem__(idx))
-            # To Tensor
-            yield batch_list_to_batch_tensors(batch)
+    #def __iter__(self):  # iterator to load data
+    #    for __ in range(math.ceil(len(self.ex_list) / float(self.batch_size))):
+    #        batch = []
+    #        for __ in range(self.batch_size):
+    #            idx = randint(0, len(self.ex_list)-1)
+    #            batch.append(self.__getitem__(idx))
+    #        # To Tensor
+    #        yield batch_list_to_batch_tensors(batch)
 
 
 class Preprocess4Seq2seq(Pipeline):

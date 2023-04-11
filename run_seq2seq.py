@@ -165,6 +165,9 @@ def main():
 
     args = parser.parse_args()
 
+
+    args.local_rank = int(os.environ["LOCAL_RANK"])
+
     if not(args.model_recover_path and Path(args.model_recover_path).exists()):
         args.model_recover_path = None
 
@@ -188,7 +191,7 @@ def main():
         device = torch.device("cuda", args.local_rank)
         n_gpu = torch.cuda.device_count()
         # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
-        dist.init_process_group(backend='nccl')
+        dist.init_process_group(backend='nccl', init_method='env://')
 
     logger.info("device: {} n_gpu: {}, distributed training: {}, 16-bits training: {}".format(
         device, n_gpu, bool(args.local_rank != -1), args.fp16))
@@ -227,12 +230,12 @@ def main():
         print("Loading Train Dataset", args.data_dir)
         bi_uni_pipeline = [utils_seq2seq.Preprocess4Seq2seq(args.max_pred, args.mask_prob, list(tokenizer.vocab.keys()), tokenizer.convert_tokens_to_ids, args.max_seq_length, mask_source_words=False, skipgram_prb=args.skipgram_prb, skipgram_size=args.skipgram_size, mask_whole_word=args.mask_whole_word, tokenizer=data_tokenizer, use_bert=args.use_bert)]
 
-        if n_gpu>1:
-            file = os.path.join(
-                args.data_dir, args.src_file, str(args.local_rank))
-            logger.info('train filename: '+str(file))
-        else:
-            file = os.path.join(
+        #if n_gpu>1:
+        #    file = os.path.join(
+        #        args.data_dir, args.src_file, str(args.local_rank))
+        #    logger.info('train filename: '+str(file))
+        #else:
+        file = os.path.join(
                 args.data_dir, args.src_file if args.src_file else 'train.tgt')
         train_dataset = utils_seq2seq.Seq2SeqDataset(
             file, args.train_batch_size, data_tokenizer, args.max_seq_length, bi_uni_pipeline=bi_uni_pipeline, src_desc=args.src_desc, tgt_desc=args.tgt_desc)
@@ -240,11 +243,11 @@ def main():
             train_sampler = RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples)
             _batch_size = args.train_batch_size
         else:
-            #train_sampler = DistributedSampler(RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples))
-            train_sampler = RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples)
+            train_sampler = DistributedSampler(RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples))
+            #train_sampler = RandomSampler(train_dataset, replacement=False, num_samples=args.num_samples)
             _batch_size = args.train_batch_size // dist.get_world_size()
         train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=_batch_size, sampler=train_sampler,
-                                                       num_workers=args.num_workers, collate_fn=utils_seq2seq.batch_list_to_batch_tensors, persistent_workers=True, pin_memory=False)
+                                                       num_workers=args.num_workers, collate_fn=utils_seq2seq.batch_list_to_batch_tensors, persistent_workers=args.num_workers>0, pin_memory=False)
 
     # note: args.train_batch_size has been changed to (/= args.gradient_accumulation_steps)
     # t_total = int(math.ceil(len(train_dataset.ex_list) / args.train_batch_size)
@@ -260,19 +263,19 @@ def main():
     if (recover_step is None) and (args.model_recover_path is None):
         model_recover = None
     else:
-        if recover_step:
+        if args.model_recover_path:
+            logger.info("***** Recover model: %s *****",
+                        args.model_recover_path)
+            model_recover = torch.load(
+                args.model_recover_path, map_location='cpu')
+
+        elif recover_step:
             logger.info("***** Recover model: %d *****", recover_step)
             model_recover = torch.load(os.path.join(
                 args.output_dir, "model.{0}.bin".format(recover_step)), map_location='cpu')
             # recover_step == number of epochs
             global_step = math.floor(
                 recover_step * t_total / args.num_train_epochs)
-        elif args.model_recover_path:
-            logger.info("***** Recover model: %s *****",
-                        args.model_recover_path)
-            model_recover = torch.load(
-                args.model_recover_path, map_location='cpu')
-
     model = model_class.from_pretrained(
         args.model_name_or_path, state_dict=model_recover, config=config)
     if args.local_rank == 0:
@@ -345,8 +348,7 @@ def main():
             start_epoch = 1
         for i_epoch in trange(start_epoch, int(args.num_train_epochs)+1, desc="Epoch", disable=args.local_rank not in (-1, 0)):
             if args.local_rank != -1:
-                #train_sampler.set_epoch(i_epoch)
-                pass
+                train_sampler.set_epoch(i_epoch)
             iter_bar = tqdm(train_dataloader, desc='Iter %d(loss=X.XXX)'%i_epoch,
                             disable=args.local_rank not in (-1, 0))
             n_batch = len(train_dataloader)
@@ -391,7 +393,7 @@ def main():
                     time.sleep(5)
                     continue
 
-                if step>0 and step%(n_batch//5) == 0:
+                if step>0 and step%1500 == 0:
                     # Save a trained model
                     if (args.local_rank == -1 or torch.distributed.get_rank() == 0):
                         logger.info(
@@ -399,22 +401,45 @@ def main():
                         model_to_save = model.module if hasattr(
                             model, 'module') else model  # Only save the model it-self
                         output_model_file = os.path.join(
-                            args.output_dir, "model_{0}.bin".format(i_epoch-1+step/n_batch))
+                            args.output_dir, "model_tmp.bin")
                         torch.save(model_to_save.state_dict(), output_model_file)
                         output_optim_file = os.path.join(
-                            args.output_dir, "optim_{0}.bin".format(i_epoch-1+step/n_batch))
+                            args.output_dir, "optim_tmp.bin")
                         torch.save(optimizer.state_dict(), output_optim_file)
                         if args.fp16:
                             output_amp_file = os.path.join(
-                                args.output_dir, "amp_{0}.bin".format(i_epoch-1+step/n_batch))
+                                args.output_dir, "amp_tmp.bin")
                             torch.save(amp.state_dict(), output_amp_file)
                         output_sched_file = os.path.join(
-                            args.output_dir, "sched_{0}.bin".format(i_epoch-1+step/n_batch))
+                            args.output_dir, "sched_tmp.bin")
                         torch.save(scheduler.state_dict(), output_sched_file)
 
                         logger.info("***** CUDA.empty_cache() *****")
                         torch.cuda.empty_cache()
                         gc.collect()
+               # Save a trained model
+            if (args.local_rank == -1 or torch.distributed.get_rank() == 0):
+                logger.info(
+                    "** ** * Saving fine-tuned model and optimizer ** ** * ")
+                model_to_save = model.module if hasattr(
+                    model, 'module') else model  # Only save the model it-self
+                output_model_file = os.path.join(
+                    args.output_dir, "model_{0}.bin".format(i_epoch))
+                torch.save(model_to_save.state_dict(), output_model_file)
+                output_optim_file = os.path.join(
+                    args.output_dir, "optim_{0}.bin".format(i_epoch))
+                torch.save(optimizer.state_dict(), output_optim_file)
+                if args.fp16:
+                    output_amp_file = os.path.join(
+                        args.output_dir, "amp_{0}.bin".format(i_epoch))
+                    torch.save(amp.state_dict(), output_amp_file)
+                output_sched_file = os.path.join(
+                    args.output_dir, "sched_{0}.bin".format(i_epoch))
+                torch.save(scheduler.state_dict(), output_sched_file)
+
+                logger.info("***** CUDA.empty_cache() *****")
+                torch.cuda.empty_cache()
+                gc.collect()
 
 
 if __name__ == "__main__":

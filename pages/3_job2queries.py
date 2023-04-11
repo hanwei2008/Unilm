@@ -14,7 +14,7 @@ st.title('根据招工详情生成query')
 
 @st.cache_resource
 def gen_model():
-    up = UnilmPredictor(model_recover_path='data/unilm_job2queries/model.1.bin')
+    up = UnilmPredictor(model_recover_path='data/unilm_job2queries/model.3.bin')
 
     return up
 
