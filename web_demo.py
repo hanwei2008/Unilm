@@ -25,4 +25,5 @@ st.title('文本生成模型 Demo')
 st.markdown('''
 ## todolist
 * title2job——用标题、工种、行业、薪资等生成jd
+* 训练监控---仪表盘
 ''')
